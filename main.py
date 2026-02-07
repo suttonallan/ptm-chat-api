@@ -17,7 +17,7 @@ app.add_middleware(SlowAPIMiddleware)
 def rate_limit_handler(request, exc):
     return JSONResponse(
         status_code=429,
-        content={"detail": "Vous avez atteint la limite de messages. Appelez-nous au [numéro] pour continuer la conversation !"}
+        content={"detail": "Vous avez atteint la limite de messages. Appelez-nous au 514-344-8008 pour continuer la conversation !"}
     )
 
 # CORS configuration
