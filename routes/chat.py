@@ -15,8 +15,7 @@ class ChatResponse(BaseModel):
     reply: str
 
 @router.post("/chat", response_model=ChatResponse)
-@limiter.limit("10/minute")
-@limiter.limit("5/hour")
+@limiter.limit("20/hour")
 async def chat_endpoint(request: ChatRequest):
     try:
         reply = await get_chat_response(

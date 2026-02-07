@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse
 app = FastAPI(title="PTM Chat API")
 
 # Rate limiter
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, default_limits=["50/day"])
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
@@ -17,7 +17,7 @@ app.add_middleware(SlowAPIMiddleware)
 def rate_limit_handler(request, exc):
     return JSONResponse(
         status_code=429,
-        content={"detail": "Trop de requêtes, réessayez dans une minute"}
+        content={"detail": "Vous avez atteint la limite de messages. Appelez-nous au [numéro] pour continuer la conversation !"}
     )
 
 # CORS configuration
