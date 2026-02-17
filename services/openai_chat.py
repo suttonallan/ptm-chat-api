@@ -51,15 +51,31 @@ async def get_chat_response(
     
     # Add expertise result to context if available
     if expertise_result:
-        expertise_context = f"""
-Résultat d'expertise IA disponible :
-- Verdict: {expertise_result.get('verdict', 'N/A')}
-- Score: {expertise_result.get('score', 'N/A')}/100
-- Commentaire expert: {expertise_result.get('commentaire_expert', 'N/A')}
+        lines = [
+            "Résultat d'expertise IA disponible :",
+            f"- Marque détectée: {expertise_result.get('marque_detectee', 'N/A')}",
+            f"- Modèle: {expertise_result.get('modele_detecte', 'N/A')}",
+            f"- Âge estimé: {expertise_result.get('annee_estimee', 'N/A')}",
+            f"- Verdict: {expertise_result.get('verdict', 'N/A')}",
+            f"- Score: {expertise_result.get('score', 'N/A')}/10",
+            f"- Commentaire expert: {expertise_result.get('commentaire_expert', 'N/A')}",
+        ]
 
-Utilise ces informations pour personnaliser tes réponses et proposer des services adaptés.
-"""
-        messages.append({"role": "system", "content": expertise_context})
+        valeur = expertise_result.get("valeur_marche_estimee")
+        if valeur:
+            lines.append(f"- Valeur sans travaux: {valeur.get('sans_travaux', 'N/A')}")
+            lines.append(f"- Valeur avec travaux: {valeur.get('avec_travaux', 'N/A')}")
+
+        travaux = expertise_result.get("travaux_recommandes")
+        if travaux:
+            lines.append("- Travaux recommandés:")
+            for t in travaux:
+                lines.append(f"  • {t.get('travail', '')} (priorité: {t.get('priorite', '')}, coût: {t.get('cout_estime', '')})")
+
+        lines.append("")
+        lines.append("Utilise ces informations pour personnaliser tes réponses et proposer des services adaptés.")
+
+        messages.append({"role": "system", "content": "\n".join(lines)})
     
     # Get conversation history for this session
     if session_id in conversation_history:
