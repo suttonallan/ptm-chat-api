@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from services.openai_chat import get_chat_response
@@ -16,12 +16,12 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit("20/hour")
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: Request, body: ChatRequest):
     try:
         reply = await get_chat_response(
-            message=request.message,
-            session_id=request.session_id,
-            expertise_result=request.expertise_result
+            message=body.message,
+            session_id=body.session_id,
+            expertise_result=body.expertise_result
         )
         return ChatResponse(reply=reply)
     except Exception as e:
