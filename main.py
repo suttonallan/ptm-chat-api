@@ -25,7 +25,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://ptm-chat.onrender.com"
+        "https://ptm-chat.onrender.com",
+        "https://pianotechniquemontreal.com",
+        "https://www.pianotechniquemontreal.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
