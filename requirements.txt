@@ -4,5 +4,5 @@ openai
 python-dotenv
 slowapi
 sqlalchemy
-httpx
 python-multipart
+google-generativeai

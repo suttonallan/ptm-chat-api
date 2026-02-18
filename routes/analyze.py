@@ -1,6 +1,7 @@
+import base64
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from typing import Optional
-from services.piano_analysis import analyze_piano
+from services.piano_analysis import analyze_piano_images
 from main import limiter
 
 router = APIRouter()
@@ -34,25 +35,21 @@ async def analyze_endpoint(
             )
 
     try:
-        contents = [await img.read() for img in images]
-        filenames = [img.filename or "image.jpg" for img in images]
-        content_types = [img.content_type or "image/jpeg" for img in images]
+        images_data = []
+        for img in images:
+            content = await img.read()
+            images_data.append({
+                "data": base64.b64encode(content).decode("utf-8"),
+                "mime_type": img.content_type or "image/jpeg",
+            })
 
-        result = await analyze_piano(
-            images=contents,
-            filenames=filenames,
-            content_types=content_types,
-            email=email,
-            nom=nom,
-            telephone=telephone,
-            notes=notes,
-        )
+        result = await analyze_piano_images(images_data, notes=notes)
         return result
 
-    except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=502,
+            status_code=500,
             detail=f"Erreur lors de l'analyse : {str(e)}",
         )
