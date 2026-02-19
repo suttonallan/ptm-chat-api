@@ -120,8 +120,32 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
         image_bytes = base64.b64decode(img_data["data"])
         contents.append({"mime_type": img_data["mime_type"], "data": image_bytes})
 
-    response = await model.generate_content_async(contents)
-    analysis = parse_gemini_json(response.text)
+    try:
+        response = await model.generate_content_async(contents)
+    except Exception as e:
+        logger.error(f"Erreur appel Gemini: {e}")
+        raise HTTPException(status_code=502, detail=f"Erreur de communication avec le service d'analyse: {str(e)}")
+
+    # Handle blocked responses (safety filters)
+    try:
+        response_text = response.text
+    except ValueError:
+        # response.text raises ValueError if response was blocked
+        block_reason = "inconnue"
+        if hasattr(response, 'prompt_feedback') and response.prompt_feedback:
+            block_reason = str(response.prompt_feedback)
+        logger.warning(f"Réponse Gemini bloquée: {block_reason}")
+        raise HTTPException(
+            status_code=422,
+            detail="L'image n'a pas pu être analysée. Assurez-vous d'envoyer une photo claire d'un piano."
+        )
+
+    if not response_text or not response_text.strip():
+        logger.warning("Réponse Gemini vide")
+        raise HTTPException(status_code=502, detail="Le service d'analyse a retourné une réponse vide.")
+
+    logger.info(f"Réponse Gemini reçue ({len(response_text)} chars)")
+    analysis = parse_gemini_json(response_text)
 
     return {
         "success": True,
