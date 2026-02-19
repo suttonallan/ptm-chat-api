@@ -120,7 +120,7 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
         image_bytes = base64.b64decode(img_data["data"])
         contents.append({"mime_type": img_data["mime_type"], "data": image_bytes})
 
-    response = model.generate_content(contents)
+    response = await model.generate_content_async(contents)
     analysis = parse_gemini_json(response.text)
 
     return {

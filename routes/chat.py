@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from services.openai_chat import get_chat_response
-from main import limiter
+from limiter import limiter
 
 router = APIRouter()
 

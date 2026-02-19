@@ -2,7 +2,7 @@ import base64
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from typing import Optional
 from services.piano_analysis import analyze_piano_images
-from main import limiter
+from limiter import limiter
 
 router = APIRouter()
 
