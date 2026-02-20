@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from services.openai_chat import get_chat_response
 from services.piano_analysis import analyze_piano_images
-from services.url_scraper import find_urls, scrape_listing, format_listing_context
+from services.url_scraper import find_urls, scrape_listing, format_listing_context, download_listing_images
 from limiter import limiter
 
 router = APIRouter()
@@ -24,25 +24,44 @@ class ChatUploadResponse(BaseModel):
     reply: str
     expertise_result: Optional[Dict[str, Any]] = None
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatUploadResponse)
 @limiter.limit("20/hour")
 async def chat_endpoint(request: Request, body: ChatRequest):
     try:
         # Detect URLs in the user message and scrape listing data
         listing_context = None
+        expertise_result = body.expertise_result
         urls = find_urls(body.message)
         if urls:
             listing = await scrape_listing(urls[0])
             if listing:
                 listing_context = format_listing_context(listing)
 
+                # Download and analyze listing images via Gemini
+                image_urls = listing.get("images", [])
+                if image_urls and not expertise_result:
+                    images_data = await download_listing_images(image_urls)
+                    if images_data:
+                        notes = f"Achat potentiel — annonce en ligne ({listing.get('source', 'web')})"
+                        if listing.get("title"):
+                            notes += f"\nTitre: {listing['title']}"
+                        if listing.get("price"):
+                            notes += f"\nPrix demandé: {listing['price']}"
+                        if listing.get("description"):
+                            notes += f"\nDescription: {listing['description'][:500]}"
+                        try:
+                            expertise_result = await analyze_piano_images(images_data, notes=notes)
+                        except Exception:
+                            # If Gemini analysis fails, continue without it
+                            pass
+
         reply = await get_chat_response(
             message=body.message,
             session_id=body.session_id,
-            expertise_result=body.expertise_result,
+            expertise_result=expertise_result,
             listing_context=listing_context,
         )
-        return ChatResponse(reply=reply)
+        return ChatUploadResponse(reply=reply, expertise_result=expertise_result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
