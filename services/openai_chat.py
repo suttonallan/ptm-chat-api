@@ -66,14 +66,28 @@ async def get_chat_response(
             lines.append(f"- Valeur sans travaux: {valeur.get('sans_travaux', 'N/A')}")
             lines.append(f"- Valeur avec travaux: {valeur.get('avec_travaux', 'N/A')}")
 
+        historique = expertise_result.get("historique_marque")
+        if historique:
+            lines.append(f"- Historique de la marque: {historique}")
+
         travaux = expertise_result.get("travaux_recommandes")
         if travaux:
             lines.append("- Travaux recommandés:")
             for t in travaux:
                 lines.append(f"  • {t.get('travail', '')} (priorité: {t.get('priorite', '')}, coût: {t.get('cout_estime', '')})")
 
+        photos_recues = expertise_result.get("photos_recues")
+        if photos_recues:
+            lines.append(f"- Photos reçues du client: {', '.join(photos_recues)}")
+
+        photos_suggerees = expertise_result.get("photos_suggerees")
+        if photos_suggerees:
+            lines.append(f"- Photos supplémentaires suggérées: {', '.join(photos_suggerees)}")
+        else:
+            lines.append("- Photos suffisantes, ne PAS en demander d'autres.")
+
         lines.append("")
-        lines.append("Utilise ces informations pour personnaliser tes réponses et proposer des services adaptés.")
+        lines.append("Utilise ces informations pour personnaliser tes réponses. Ne demande PAS de photos que le client a déjà envoyées.")
 
         messages.append({"role": "system", "content": "\n".join(lines)})
     
