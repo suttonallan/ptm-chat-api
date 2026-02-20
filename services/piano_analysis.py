@@ -51,7 +51,7 @@ Examine attentivement les photos et évalue:
 4. **État du boîtier** - Finition, rayures, fissures, veneer décollé
 5. **État du clavier** - Touches ivoire/plastique, jaunissement, ébréchures, niveau
 6. **Signes de problèmes** - Humidité, moisissure, pièces manquantes, réparations visibles
-7. **Historique de la marque** - Donne un bref historique de la marque identifiée (origine, réputation, période de fabrication)
+7. **Historique de la marque** - Donne un historique riche et intéressant de la marque identifiée : origine, fondateur, pays de fabrication, réputation, période dorée, faits marquants ou anecdotes. Sois généreux — les clients adorent en apprendre sur l'histoire de leur piano.
 
 ## Format de réponse OBLIGATOIRE
 
@@ -59,7 +59,7 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
 
 {
     "marque": "Marque identifiée ou 'Non identifiable'",
-    "historique_marque": "Bref historique de la marque (2-3 phrases)",
+    "historique_marque": "Historique riche de la marque (4-6 phrases : origine, fondateur, réputation, faits marquants)",
     "modele": "Modèle si visible ou 'Non visible'",
     "type_piano": "Droit|Queue",
     "epoque": "Ancien (1900-1940)|Vintage (1940-1980)|Moderne (post-1980)",
