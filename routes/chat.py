@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from services.openai_chat import get_chat_response
 from services.piano_analysis import analyze_piano_images
+from services.url_scraper import find_urls, scrape_listing, format_listing_context
 from limiter import limiter
 
 router = APIRouter()
@@ -27,10 +28,19 @@ class ChatUploadResponse(BaseModel):
 @limiter.limit("20/hour")
 async def chat_endpoint(request: Request, body: ChatRequest):
     try:
+        # Detect URLs in the user message and scrape listing data
+        listing_context = None
+        urls = find_urls(body.message)
+        if urls:
+            listing = await scrape_listing(urls[0])
+            if listing:
+                listing_context = format_listing_context(listing)
+
         reply = await get_chat_response(
             message=body.message,
             session_id=body.session_id,
-            expertise_result=body.expertise_result
+            expertise_result=body.expertise_result,
+            listing_context=listing_context,
         )
         return ChatResponse(reply=reply)
     except Exception as e:
