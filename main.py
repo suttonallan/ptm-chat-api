@@ -1,15 +1,15 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse
+from limiter import limiter
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="PTM Chat API")
 
-# Rate limiter
-limiter = Limiter(key_func=get_remote_address, default_limits=["50/day"])
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
@@ -35,8 +35,9 @@ app.add_middleware(
 )
 
 # Include routers
-from routes import chat
+from routes import chat, analyze
 app.include_router(chat.router, prefix="/api", tags=["chat"])
+app.include_router(analyze.router, prefix="/api", tags=["analyze"])
 
 @app.get("/")
 def root():
