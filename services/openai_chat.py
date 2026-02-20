@@ -30,7 +30,8 @@ def load_system_prompt() -> str:
 async def get_chat_response(
     message: str,
     session_id: str,
-    expertise_result: Optional[Dict[str, Any]] = None
+    expertise_result: Optional[Dict[str, Any]] = None,
+    listing_context: Optional[str] = None,
 ) -> str:
     """
     Generate a chat response using OpenAI GPT-4o
@@ -91,6 +92,10 @@ async def get_chat_response(
 
         messages.append({"role": "system", "content": "\n".join(lines)})
     
+    # Add listing context if a URL was scraped
+    if listing_context:
+        messages.append({"role": "system", "content": listing_context})
+
     # Get conversation history for this session
     if session_id in conversation_history:
         messages.extend(conversation_history[session_id])

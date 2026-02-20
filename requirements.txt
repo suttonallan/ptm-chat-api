@@ -6,3 +6,5 @@ slowapi
 sqlalchemy
 python-multipart
 google-generativeai
+httpx
+beautifulsoup4
