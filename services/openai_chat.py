@@ -53,28 +53,65 @@ async def get_chat_response(
     # Add expertise result to context if available
     if expertise_result:
         lines = [
-            "Résultat d'expertise IA disponible :",
-            f"- Marque détectée: {expertise_result.get('marque_detectee', 'N/A')}",
-            f"- Modèle: {expertise_result.get('modele_detecte', 'N/A')}",
-            f"- Âge estimé: {expertise_result.get('annee_estimee', 'N/A')}",
-            f"- Verdict: {expertise_result.get('verdict', 'N/A')}",
-            f"- Score: {expertise_result.get('score', 'N/A')}/10",
-            f"- Commentaire expert: {expertise_result.get('commentaire_expert', 'N/A')}",
+            "## RÉSULTAT D'EXPERTISE PIANO (analyse Gemini)",
+            "",
+            f"**Marque:** {expertise_result.get('marque_detectee', 'N/A')}",
+            f"**Modèle:** {expertise_result.get('modele_detecte', 'N/A')}",
+            f"**Âge estimé:** {expertise_result.get('annee_estimee', 'N/A')}",
+            f"**Verdict:** {expertise_result.get('verdict', 'N/A')}",
+            f"**Score global:** {expertise_result.get('score', 'N/A')}/10",
         ]
 
-        valeur = expertise_result.get("valeur_marche_estimee")
-        if valeur:
-            lines.append(f"- Valeur sans travaux: {valeur.get('sans_travaux', 'N/A')}")
-            lines.append(f"- Valeur avec travaux: {valeur.get('avec_travaux', 'N/A')}")
+        historique = expertise_result.get("historique_marque")
+        if historique:
+            lines.append(f"**Historique de la marque:** {historique}")
+
+        for label, key in [
+            ("État général", "etat_general"),
+            ("État du clavier", "etat_clavier"),
+            ("État du boîtier", "etat_boitier"),
+            ("Mécanique visible", "etat_mecanique_visible"),
+        ]:
+            etat = expertise_result.get(key)
+            if etat and isinstance(etat, dict):
+                lines.append(f"**{label}:** {etat.get('score', '?')}/10 — {etat.get('description', '')}")
+
+        problemes = expertise_result.get("problemes_detectes")
+        if problemes:
+            lines.append("**Problèmes détectés:**")
+            for p in problemes:
+                lines.append(f"  • {p}")
+
+        points = expertise_result.get("points_positifs")
+        if points:
+            lines.append("**Points positifs:**")
+            for p in points:
+                lines.append(f"  • {p}")
 
         travaux = expertise_result.get("travaux_recommandes")
         if travaux:
-            lines.append("- Travaux recommandés:")
+            lines.append("**Travaux recommandés:**")
             for t in travaux:
                 lines.append(f"  • {t.get('travail', '')} (priorité: {t.get('priorite', '')}, coût: {t.get('cout_estime', '')})")
 
+        valeur = expertise_result.get("valeur_marche_estimee")
+        if valeur:
+            lines.append(f"**Valeur sans travaux:** {valeur.get('sans_travaux', 'N/A')}")
+            lines.append(f"**Valeur avec travaux:** {valeur.get('avec_travaux', 'N/A')}")
+
+        if expertise_result.get("potentiel_restauration"):
+            lines.append(f"**Potentiel de restauration:** {expertise_result['potentiel_restauration']}")
+        if expertise_result.get("urgence_intervention"):
+            lines.append(f"**Urgence d'intervention:** {expertise_result['urgence_intervention']}")
+        if expertise_result.get("recommandation_contextuelle"):
+            lines.append(f"**Recommandation contextuelle:** {expertise_result['recommandation_contextuelle']}")
+        if expertise_result.get("prochaine_etape"):
+            lines.append(f"**Prochaine étape recommandée:** {expertise_result['prochaine_etape']}")
+
+        lines.append(f"\n**Commentaire expert:** {expertise_result.get('commentaire_expert', 'N/A')}")
+
         lines.append("")
-        lines.append("Utilise ces informations pour personnaliser tes réponses et proposer des services adaptés.")
+        lines.append("Utilise TOUTES ces informations pour donner une réponse riche et détaillée au client. Mentionne l'historique de la marque, les points positifs, les problèmes, et les travaux recommandés. Sois conversationnel mais complet.")
 
         messages.append({"role": "system", "content": "\n".join(lines)})
     
@@ -89,13 +126,16 @@ async def get_chat_response(
     # Add current user message
     messages.append({"role": "user", "content": message})
     
+    # Allow longer replies when presenting a piano analysis
+    token_limit = 1200 if expertise_result else 500
+
     # Call OpenAI API
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
             temperature=0.7,
-            max_tokens=500
+            max_tokens=token_limit,
         )
         
         assistant_reply = response.choices[0].message.content
