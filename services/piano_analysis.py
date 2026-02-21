@@ -42,16 +42,41 @@ Le client peut mentionner comment il a obtenu le piano. Adapte ton commentaire e
 - Yamaha, Kawai, Steinway = généralement fiables
 - Marques chinoises/coréennes entrée de gamme = durée de vie limitée
 
+### ALERTES ROUGES — Pianos à éviter / déconseiller
+
+**Drop-action (spinet)** — C'est LE piège classique :
+- Pianos droits très courts (moins de 36-38 pouces / 91-97 cm de hauteur)
+- La mécanique est SOUS le niveau des touches, reliée par des "stickers" (tiges métalliques)
+- Les marteaux frappent vers le bas au lieu de vers le haut
+- Marques typiques : certains Baldwin Acrosonic, Wurlitzer, Kimball, Gulbransen, Lester, Acme, Cable-Nelson (selon l'époque)
+- Période typique : 1930-1970 (surtout après-guerre)
+- POURQUOI C'EST PROBLÉMATIQUE : mécanique quasi-impossible à réparer (il faut tout démonter), pièces introuvables, son médiocre, toucher mou et imprécis, aucune valeur de revente
+- Si tu identifies un drop-action : verdict OBLIGATOIREMENT "PROBLÉMATIQUE", potentiel "NON RECOMMANDÉ", et mets "DROP-ACTION" dans les alertes
+
+**Autres pianos à signaler :**
+- Piano avec table d'harmonie fissurée de part en part (réparation très coûteuse)
+- Piano ayant subi un dégât d'eau majeur (moisissure, bois gondolé, cordes rouillées)
+- Piano dont le cadre en fonte est fissuré (irréparable)
+- Pianos "no-name" très bas de gamme (souvent des caisses vides sans valeur musicale)
+
+Comment identifier un drop-action sur les photos :
+- Le piano est très court/bas (souvent le panneau supérieur arrive à peine au-dessus de la taille)
+- Si l'intérieur est visible : la mécanique est en dessous des marteaux, pas au-dessus
+- Les stickers (petites tiges verticales entre les touches et la mécanique) sont visibles
+- Le clavier semble "enfoncé" dans le meuble, avec peu d'espace au-dessus
+
 ## Instructions d'analyse
 
 Examine attentivement les photos et évalue:
 1. **Marque et modèle** - Identifie si visible
 2. **Type** - Piano droit ou à queue
-3. **Époque estimée** - Ancien (pré-1940), vintage (1940-1980), moderne (post-1980)
-4. **État du boîtier** - Finition, rayures, fissures, veneer décollé
-5. **État du clavier** - Touches ivoire/plastique, jaunissement, ébréchures, niveau
-6. **Signes de problèmes** - Humidité, moisissure, pièces manquantes, réparations visibles
-7. **Historique de la marque** - Donne un bref historique de la marque identifiée (origine, réputation, période de fabrication)
+3. **Type de mécanique** - CRITIQUE : identifie si c'est un drop-action/spinet (mécanique indirecte) ou une mécanique standard (directe). Regarde la hauteur du piano, la position de la mécanique, les stickers.
+4. **Époque estimée** - Ancien (pré-1940), vintage (1940-1980), moderne (post-1980)
+5. **État du boîtier** - Finition, rayures, fissures, veneer décollé
+6. **État du clavier** - Touches ivoire/plastique, jaunissement, ébréchures, niveau
+7. **Signes de problèmes** - Humidité, moisissure, pièces manquantes, réparations visibles
+8. **Historique de la marque** - Donne un bref historique de la marque identifiée (origine, réputation, période de fabrication)
+9. **Alertes rouges** - Drop-action, table d'harmonie fissurée, dégât d'eau, cadre fissuré, etc.
 
 ## Format de réponse OBLIGATOIRE
 
@@ -62,6 +87,7 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
     "historique_marque": "Bref historique de la marque (2-3 phrases)",
     "modele": "Modèle si visible ou 'Non visible'",
     "type_piano": "Droit|Queue",
+    "type_mecanique": "Standard|Drop-action (spinet)",
     "epoque": "Ancien (1900-1940)|Vintage (1940-1980)|Moderne (post-1980)",
     "age_estime": "Fourchette d'années (ex: '80-100 ans')",
     "etat_general": {"score": 7, "description": "..."},
@@ -70,9 +96,11 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
     "etat_mecanique_visible": {"score": 5, "description": "..."},
     "problemes_detectes": ["..."],
     "points_positifs": ["..."],
+    "alertes": ["DROP-ACTION", "TABLE D'HARMONIE FISSURÉE", etc. — liste vide [] si aucune alerte],
     "travaux_recommandes": [{"travail": "...", "priorite": "HAUTE", "cout_estime": "150-200$"}],
     "score_global": 7,
     "verdict": "EXCELLENT|BON|ACCEPTABLE|NÉCESSITE TRAVAUX|PROBLÉMATIQUE",
+    "recommandation_achat": "OUI|OUI AVEC RÉSERVES|NON|ABSOLUMENT PAS",
     "valeur_marche_estimee": {"sans_travaux": "1500-2000$", "avec_travaux": "3000-4000$"},
     "potentiel_restauration": "ÉLEVÉ|MOYEN|FAIBLE|NON RECOMMANDÉ",
     "commentaire_expert": "Un paragraphe de recommandation personnalisée...",
@@ -153,6 +181,9 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
         "modele_detecte": analysis.get("modele"),
         "annee_estimee": analysis.get("age_estime"),
         "historique_marque": analysis.get("historique_marque", ""),
+        "type_mecanique": analysis.get("type_mecanique", "Standard"),
+        "alertes": analysis.get("alertes", []),
+        "recommandation_achat": analysis.get("recommandation_achat", ""),
         "verdict": analysis.get("verdict", "NON ÉVALUABLE"),
         "score": analysis.get("score_global", 0),
         "etat_general": analysis.get("etat_general", {}),

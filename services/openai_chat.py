@@ -60,7 +60,13 @@ async def get_chat_response(
             f"**Âge estimé:** {expertise_result.get('annee_estimee', 'N/A')}",
             f"**Verdict:** {expertise_result.get('verdict', 'N/A')}",
             f"**Score global:** {expertise_result.get('score', 'N/A')}/10",
+            f"**Type de mécanique:** {expertise_result.get('type_mecanique', 'Standard')}",
+            f"**Recommandation d'achat:** {expertise_result.get('recommandation_achat', 'N/A')}",
         ]
+
+        alertes = expertise_result.get("alertes")
+        if alertes:
+            lines.append(f"**⚠️ ALERTES:** {', '.join(alertes)}")
 
         historique = expertise_result.get("historique_marque")
         if historique:
