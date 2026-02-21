@@ -77,6 +77,11 @@ Examine attentivement les photos et évalue:
 7. **Signes de problèmes** - Humidité, moisissure, pièces manquantes, réparations visibles
 8. **Historique de la marque** - Donne un bref historique de la marque identifiée (origine, réputation, période de fabrication)
 9. **Alertes rouges** - Drop-action, table d'harmonie fissurée, dégât d'eau, cadre fissuré, etc.
+3. **Époque estimée** - Ancien (pré-1940), vintage (1940-1980), moderne (post-1980)
+4. **État du boîtier** - Finition, rayures, fissures, veneer décollé
+5. **État du clavier** - Touches ivoire/plastique, jaunissement, ébréchures, niveau
+6. **Signes de problèmes** - Humidité, moisissure, pièces manquantes, réparations visibles
+7. **Historique de la marque** - Donne un historique riche et intéressant de la marque identifiée : origine, fondateur, pays de fabrication, réputation, période dorée, faits marquants ou anecdotes. Sois généreux — les clients adorent en apprendre sur l'histoire de leur piano.
 
 ## Format de réponse OBLIGATOIRE
 
@@ -84,7 +89,7 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
 
 {
     "marque": "Marque identifiée ou 'Non identifiable'",
-    "historique_marque": "Bref historique de la marque (2-3 phrases)",
+    "historique_marque": "Historique riche de la marque (4-6 phrases : origine, fondateur, réputation, faits marquants)",
     "modele": "Modèle si visible ou 'Non visible'",
     "type_piano": "Droit|Queue",
     "type_mecanique": "Standard|Drop-action (spinet)",
@@ -106,7 +111,9 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
     "commentaire_expert": "Un paragraphe de recommandation personnalisée...",
     "urgence_intervention": "AUCUNE|FAIBLE|MOYENNE|HAUTE",
     "prochaine_etape_recommandee": "Ce que le client devrait faire maintenant",
-    "recommandation_contextuelle": "Adapte selon le contexte mentionné. Sinon, laisse vide."
+    "recommandation_contextuelle": "Adapte selon le contexte mentionné. Sinon, laisse vide.",
+    "photos_recues": ["Description de chaque photo reçue (ex: 'Vue d'ensemble du piano droit', 'Gros plan du clavier')"],
+    "photos_suggerees": ["Photos supplémentaires qui amélioreraient l'évaluation (ex: 'Intérieur du piano (marteaux et cordes, en ouvrant le couvercle supérieur)', 'Numéro de série'). Liste vide si les photos sont suffisantes."]
 }
 
 Les scores sont sur 10. Sois honnête mais encourageant.
@@ -199,5 +206,7 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
         "recommandation_contextuelle": analysis.get("recommandation_contextuelle", ""),
         "prochaine_etape": analysis.get("prochaine_etape_recommandee", ""),
         "urgence_intervention": analysis.get("urgence_intervention", ""),
+        "photos_recues": analysis.get("photos_recues", []),
+        "photos_suggerees": analysis.get("photos_suggerees", []),
         "url_zoom": "https://gazelleapp.io/scheduling/6tMdQhXdCXDzd1PQBKxhzGmJ#/address"
     }
