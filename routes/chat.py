@@ -42,45 +42,28 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                 listing_context = format_listing_context(listing)
                 logger.info(f"Contexte d'annonce généré ({len(listing_context)} chars)")
 
-                if not expertise_result:
-                    screenshot = listing.get("screenshot")
-                    image_urls = listing.get("images", [])
-
-                    if screenshot:
-                        # Screenshot mode: send the full page capture to Gemini
-                        logger.info("Analyse Gemini via capture d'écran de l'annonce...")
-                        notes = f"Achat potentiel — capture d'écran d'une annonce en ligne ({listing.get('source', 'web')})"
-                        notes += "\nCeci est une capture d'écran de la page d'annonce complète."
-                        notes += "\nAnalyse le piano visible dans les photos de l'annonce."
+                # Download and analyze listing images via Gemini
+                image_urls = listing.get("images", [])
+                if image_urls and not expertise_result:
+                    logger.info(f"Téléchargement de {len(image_urls)} images de l'annonce...")
+                    images_data = await download_listing_images(image_urls)
+                    if images_data:
+                        notes = f"Achat potentiel — annonce en ligne ({listing.get('source', 'web')})"
                         if listing.get("title"):
                             notes += f"\nTitre: {listing['title']}"
+                        if listing.get("price"):
+                            notes += f"\nPrix demandé: {listing['price']}"
+                        if listing.get("description"):
+                            notes += f"\nDescription: {listing['description'][:500]}"
                         try:
-                            expertise_result = await analyze_piano_images([screenshot], notes=notes)
-                            logger.info("Analyse Gemini via screenshot réussie")
+                            expertise_result = await analyze_piano_images(images_data, notes=notes)
+                            logger.info("Analyse Gemini des photos de l'annonce réussie")
                         except Exception as e:
-                            logger.warning(f"Analyse Gemini (screenshot) échouée: {e}")
-
-                    elif image_urls:
-                        # Classic mode: download individual images
-                        logger.info(f"Téléchargement de {len(image_urls)} images de l'annonce...")
-                        images_data = await download_listing_images(image_urls)
-                        if images_data:
-                            notes = f"Achat potentiel — annonce en ligne ({listing.get('source', 'web')})"
-                            if listing.get("title"):
-                                notes += f"\nTitre: {listing['title']}"
-                            if listing.get("price"):
-                                notes += f"\nPrix demandé: {listing['price']}"
-                            if listing.get("description"):
-                                notes += f"\nDescription: {listing['description'][:500]}"
-                            try:
-                                expertise_result = await analyze_piano_images(images_data, notes=notes)
-                                logger.info("Analyse Gemini des photos de l'annonce réussie")
-                            except Exception as e:
-                                logger.warning(f"Analyse Gemini échouée pour l'annonce: {e}")
-                        else:
-                            logger.warning("Aucune image n'a pu être téléchargée de l'annonce")
+                            logger.warning(f"Analyse Gemini échouée pour l'annonce: {e}")
                     else:
-                        logger.info("Aucune image ni screenshot disponible pour l'annonce")
+                        logger.warning("Aucune image n'a pu être téléchargée de l'annonce")
+                elif not image_urls:
+                    logger.info("Aucune image trouvée dans l'annonce")
             else:
                 # Scraping failed — provide minimal fallback context so GPT-4o
                 # knows a listing URL was shared and can still comment on it

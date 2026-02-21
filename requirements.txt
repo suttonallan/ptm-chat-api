@@ -8,4 +8,3 @@ python-multipart
 google-generativeai
 httpx
 beautifulsoup4
-playwright
