@@ -6,7 +6,8 @@ import logging
 from services.openai_chat import get_chat_response
 from services.piano_analysis import analyze_piano_images
 from services.url_scraper import find_urls, scrape_listing, format_listing_context, download_listing_images
-from limiter import limiter
+from limiter import limiter, can_analyze, record_analysis, analyses_remaining
+from slowapi.util import get_remote_address
 
 logger = logging.getLogger("piano-tek-ai")
 
@@ -28,7 +29,7 @@ class ChatUploadResponse(BaseModel):
     expertise_result: Optional[Dict[str, Any]] = None
 
 @router.post("/chat", response_model=ChatUploadResponse)
-@limiter.limit("20/hour")
+@limiter.limit("100/day")
 async def chat_endpoint(request: Request, body: ChatRequest):
     try:
         # Detect URLs in the user message and scrape listing data
@@ -43,8 +44,9 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                 logger.info(f"Contexte d'annonce généré ({len(listing_context)} chars)")
 
                 # Download and analyze listing images via Gemini
+                client_ip = get_remote_address(request)
                 image_urls = listing.get("images", [])
-                if image_urls and not expertise_result:
+                if image_urls and not expertise_result and can_analyze(client_ip):
                     logger.info(f"Téléchargement de {len(image_urls)} images de l'annonce...")
                     images_data = await download_listing_images(image_urls)
                     if images_data:
@@ -57,11 +59,14 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                             notes += f"\nDescription: {listing['description'][:500]}"
                         try:
                             expertise_result = await analyze_piano_images(images_data, notes=notes)
-                            logger.info("Analyse Gemini des photos de l'annonce réussie")
+                            record_analysis(client_ip)
+                            logger.info(f"Analyse Gemini réussie (reste {analyses_remaining(client_ip)} analyses)")
                         except Exception as e:
                             logger.warning(f"Analyse Gemini échouée pour l'annonce: {e}")
                     else:
                         logger.warning("Aucune image n'a pu être téléchargée de l'annonce")
+                elif image_urls and not can_analyze(client_ip):
+                    logger.info("Limite d'analyses photo atteinte pour cette IP")
                 elif not image_urls:
                     logger.info("Aucune image trouvée dans l'annonce")
             else:
@@ -90,7 +95,7 @@ async def chat_endpoint(request: Request, body: ChatRequest):
 
 
 @router.post("/chat-upload", response_model=ChatUploadResponse)
-@limiter.limit("10/hour")
+@limiter.limit("10/day")
 async def chat_upload_endpoint(
     request: Request,
     session_id: str = Form(...),
@@ -98,6 +103,17 @@ async def chat_upload_endpoint(
     images: List[UploadFile] = File(...),
 ):
     """Chat endpoint that accepts images. Analyzes photos via Gemini then responds via GPT-4o."""
+    client_ip = get_remote_address(request)
+    remaining = analyses_remaining(client_ip)
+    if remaining <= 0:
+        raise HTTPException(
+            status_code=429,
+            detail="Vous avez atteint la limite de 3 analyses photo gratuites par jour. "
+                   "Pour des analyses supplémentaires, réservez une consultation Zoom "
+                   "d'accompagnement à l'achat (60$) : "
+                   "https://gazelleapp.io/scheduling/6tMdQhXdCXDzd1PQBKxhzGmJ#/address",
+        )
+
     if len(images) < 1 or len(images) > MAX_IMAGES:
         raise HTTPException(
             status_code=400,
@@ -123,6 +139,8 @@ async def chat_upload_endpoint(
 
         # 2. Run piano analysis via Gemini
         expertise_result = await analyze_piano_images(images_data, notes=message or None)
+        record_analysis(client_ip)
+        logger.info(f"Analyse photo réussie (reste {analyses_remaining(client_ip)} analyses)")
 
         # 3. Build a user message that tells GPT-4o the client sent photos
         user_message = message if message else "J'ai envoyé des photos de mon piano pour une évaluation."
