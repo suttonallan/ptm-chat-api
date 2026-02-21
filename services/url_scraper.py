@@ -1,7 +1,12 @@
 import re
+import json
+import base64
+import logging
 import httpx
 from bs4 import BeautifulSoup
 from typing import Optional, Dict, List
+
+logger = logging.getLogger("piano-tek-ai")
 
 # Regex to find URLs in a message
 URL_PATTERN = re.compile(
@@ -27,6 +32,9 @@ HEADERS = {
     "Accept-Language": "fr-CA,fr;q=0.9,en;q=0.8",
 }
 
+# Max images to download and analyze from a listing
+MAX_LISTING_IMAGES = 3
+
 
 def find_urls(text: str) -> List[str]:
     """Extract all URLs from a text string."""
@@ -46,6 +54,69 @@ def _extract_og_images(soup: BeautifulSoup) -> List[str]:
         content = tag.get("content", "")
         if content:
             images.append(content)
+    return images
+
+
+def _extract_kijiji_images(soup: BeautifulSoup) -> List[str]:
+    """
+    Extract all listing images from a Kijiji page.
+    Tries multiple strategies: og:image, gallery images, JSON-LD, and img tags.
+    """
+    images: List[str] = []
+    seen: set = set()
+
+    def _add(url: str):
+        if url and url not in seen and url.startswith("http"):
+            seen.add(url)
+            images.append(url)
+
+    # 1. OpenGraph images
+    for tag in soup.find_all("meta", property="og:image"):
+        _add(tag.get("content", ""))
+
+    # 2. JSON-LD structured data (often has image arrays)
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+            ld_images = data.get("image", [])
+            if isinstance(ld_images, str):
+                _add(ld_images)
+            elif isinstance(ld_images, list):
+                for img in ld_images:
+                    _add(img if isinstance(img, str) else img.get("url", ""))
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    # 3. Image URLs embedded in script blocks (common in modern Kijiji)
+    for script in soup.find_all("script"):
+        if script.string:
+            # Look for image URLs in JS data
+            urls = re.findall(
+                r'https?://[^\"\s\'\\]+\.(?:jpg|jpeg|png|webp)',
+                script.string,
+            )
+            for u in urls:
+                # Filter to likely listing images (not icons, logos, etc.)
+                if any(kw in u.lower() for kw in ["kijiji", "nebula", "classistatic", "images"]):
+                    _add(u)
+
+    # 4. Gallery img tags with data-src (lazy loading) or src
+    for img in soup.find_all("img"):
+        for attr in ("data-src", "src", "data-lazy-src"):
+            src = img.get(attr, "")
+            if src and any(kw in src.lower() for kw in ["kijiji", "nebula", "classistatic"]):
+                _add(src)
+
+    # 5. picture > source tags (srcset)
+    for source in soup.find_all("source"):
+        srcset = source.get("srcset", "")
+        if srcset:
+            # srcset can have multiple URLs with size descriptors
+            for part in srcset.split(","):
+                src_url = part.strip().split()[0]
+                if any(kw in src_url.lower() for kw in ["kijiji", "nebula", "classistatic"]):
+                    _add(src_url)
+
     return images
 
 
@@ -79,8 +150,8 @@ def _extract_kijiji(soup: BeautifulSoup, url: str) -> Dict:
     if loc:
         data["location"] = loc.get_text(strip=True) if hasattr(loc, 'get_text') else str(loc).strip()
 
-    # Images
-    data["images"] = _extract_og_images(soup)
+    # Images — enhanced extraction
+    data["images"] = _extract_kijiji_images(soup)
 
     return data
 
@@ -113,6 +184,50 @@ def _extract_generic(soup: BeautifulSoup, url: str) -> Dict:
     data["images"] = _extract_og_images(soup)
 
     return data
+
+
+async def download_listing_images(image_urls: List[str], max_images: int = MAX_LISTING_IMAGES) -> List[Dict]:
+    """
+    Download images from URLs and return them as base64-encoded dicts
+    suitable for analyze_piano_images().
+
+    Returns list of {"data": "<base64>", "mime_type": "image/jpeg"}.
+    """
+    images_data: List[Dict] = []
+    urls_to_try = image_urls[:max_images + 2]  # Try a few extra in case some fail
+
+    MIME_MAP = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+        "gif": "image/gif",
+    }
+
+    async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+        for img_url in urls_to_try:
+            if len(images_data) >= max_images:
+                break
+            try:
+                resp = await client.get(img_url, headers=HEADERS)
+                resp.raise_for_status()
+
+                content_type = resp.headers.get("content-type", "")
+                if "image/" in content_type:
+                    mime_type = content_type.split(";")[0].strip()
+                else:
+                    # Guess from URL extension
+                    ext = img_url.rsplit(".", 1)[-1].lower().split("?")[0]
+                    mime_type = MIME_MAP.get(ext, "image/jpeg")
+
+                b64 = base64.b64encode(resp.content).decode("utf-8")
+                images_data.append({"data": b64, "mime_type": mime_type})
+                logger.info(f"Image téléchargée: {img_url[:80]}... ({len(resp.content)} bytes)")
+            except Exception as e:
+                logger.warning(f"Impossible de télécharger l'image {img_url[:80]}: {e}")
+                continue
+
+    return images_data
 
 
 async def scrape_listing(url: str) -> Optional[Dict]:
