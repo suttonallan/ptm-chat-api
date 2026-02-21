@@ -2,10 +2,13 @@ import base64
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
+import logging
 from services.openai_chat import get_chat_response
 from services.piano_analysis import analyze_piano_images
 from services.url_scraper import find_urls, scrape_listing, format_listing_context, download_listing_images
 from limiter import limiter
+
+logger = logging.getLogger("piano-tek-ai")
 
 router = APIRouter()
 
@@ -33,13 +36,16 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         expertise_result = body.expertise_result
         urls = find_urls(body.message)
         if urls:
+            logger.info(f"URL détectée dans le message: {urls[0][:80]}")
             listing = await scrape_listing(urls[0])
             if listing:
                 listing_context = format_listing_context(listing)
+                logger.info(f"Contexte d'annonce généré ({len(listing_context)} chars)")
 
                 # Download and analyze listing images via Gemini
                 image_urls = listing.get("images", [])
                 if image_urls and not expertise_result:
+                    logger.info(f"Téléchargement de {len(image_urls)} images de l'annonce...")
                     images_data = await download_listing_images(image_urls)
                     if images_data:
                         notes = f"Achat potentiel — annonce en ligne ({listing.get('source', 'web')})"
@@ -51,9 +57,26 @@ async def chat_endpoint(request: Request, body: ChatRequest):
                             notes += f"\nDescription: {listing['description'][:500]}"
                         try:
                             expertise_result = await analyze_piano_images(images_data, notes=notes)
-                        except Exception:
-                            # If Gemini analysis fails, continue without it
-                            pass
+                            logger.info("Analyse Gemini des photos de l'annonce réussie")
+                        except Exception as e:
+                            logger.warning(f"Analyse Gemini échouée pour l'annonce: {e}")
+                    else:
+                        logger.warning("Aucune image n'a pu être téléchargée de l'annonce")
+                elif not image_urls:
+                    logger.info("Aucune image trouvée dans l'annonce")
+            else:
+                # Scraping failed — provide minimal fallback context so GPT-4o
+                # knows a listing URL was shared and can still comment on it
+                logger.warning(f"Scraping échoué pour {urls[0][:80]}, utilisation du contexte minimal")
+                domain = urls[0].split("/")[2] if len(urls[0].split("/")) > 2 else "web"
+                source = "Kijiji" if "kijiji" in domain.lower() else domain
+                listing_context = (
+                    f"Le client a partagé un lien d'annonce ({source}) : {urls[0]}\n"
+                    f"IMPORTANT : Nous n'avons pas pu récupérer les détails de l'annonce automatiquement. "
+                    f"Demande au client de t'envoyer des photos du piano avec le bouton 📎 "
+                    f"pour que tu puisses faire une évaluation. Mentionne aussi qu'une inspection "
+                    f"avant achat est toujours recommandée."
+                )
 
         reply = await get_chat_response(
             message=body.message,
