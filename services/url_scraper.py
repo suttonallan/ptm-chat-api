@@ -27,9 +27,18 @@ HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
+        "Chrome/131.0.0.0 Safari/537.36"
     ),
-    "Accept-Language": "fr-CA,fr;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "fr-CA,fr;q=0.9,en-CA;q=0.8,en-US;q=0.7,en;q=0.6",
+    "Accept-Encoding": "gzip, deflate, br",
+    "DNT": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "max-age=0",
 }
 
 # Max images to download and analyze from a listing
@@ -239,16 +248,29 @@ async def scrape_listing(url: str) -> Optional[Dict]:
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
             resp = await client.get(url, headers=HEADERS)
+            logger.info(f"Scrape {url[:80]} → HTTP {resp.status_code}")
             resp.raise_for_status()
-    except (httpx.HTTPError, httpx.TimeoutException):
+    except httpx.TimeoutException:
+        logger.warning(f"Timeout lors du scraping de {url[:80]}")
+        return None
+    except httpx.HTTPError as e:
+        logger.warning(f"Erreur HTTP lors du scraping de {url[:80]}: {e}")
         return None
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
     if "kijiji.ca" in url.lower():
-        return _extract_kijiji(soup, url)
+        listing = _extract_kijiji(soup, url)
     else:
-        return _extract_generic(soup, url)
+        listing = _extract_generic(soup, url)
+
+    logger.info(
+        f"Scrape résultat: title={listing.get('title', 'N/A')!r}, "
+        f"price={listing.get('price', 'N/A')!r}, "
+        f"images={len(listing.get('images', []))}, "
+        f"description={bool(listing.get('description'))}"
+    )
+    return listing
 
 
 def format_listing_context(listing: Dict) -> str:
