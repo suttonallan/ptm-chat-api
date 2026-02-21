@@ -239,38 +239,107 @@ async def download_listing_images(image_urls: List[str], max_images: int = MAX_L
     return images_data
 
 
+async def screenshot_listing(url: str) -> Optional[Dict]:
+    """
+    Use Playwright to render a listing page in a real browser and take a
+    screenshot.  Returns a dict with a single base64-encoded screenshot in
+    the 'images' key (same shape as scrape_listing) so the rest of the
+    pipeline works unchanged.
+
+    Falls back to None if Playwright is not installed or the page fails.
+    """
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        logger.warning("Playwright non installé — screenshot impossible")
+        return None
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page(
+                viewport={"width": 1280, "height": 900},
+                locale="fr-CA",
+            )
+            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            # Let images load
+            await page.wait_for_timeout(2000)
+
+            # Try to extract text info from the rendered page
+            title = await page.title()
+            og_title = await page.evaluate(
+                "document.querySelector('meta[property=\"og:title\"]')?.content || ''"
+            )
+
+            screenshot_bytes = await page.screenshot(type="jpeg", quality=80)
+            await browser.close()
+
+        b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
+
+        domain = url.split("/")[2] if len(url.split("/")) > 2 else "web"
+        source = "Kijiji" if "kijiji" in domain.lower() else domain
+
+        listing = {
+            "source": source,
+            "url": url,
+            "title": og_title or title or None,
+            "screenshot": {"data": b64, "mime_type": "image/jpeg"},
+        }
+
+        logger.info(
+            f"Screenshot capturé pour {url[:80]} "
+            f"({len(screenshot_bytes)} bytes, title={listing.get('title', 'N/A')!r})"
+        )
+        return listing
+
+    except Exception as e:
+        logger.warning(f"Screenshot échoué pour {url[:80]}: {e}")
+        return None
+
+
 async def scrape_listing(url: str) -> Optional[Dict]:
     """
     Fetch and parse a classified-ad URL.
     Returns a dict with title, price, description, images, etc.
     Returns None if the page can't be fetched.
+
+    Strategy: try fast httpx scrape first, fall back to Playwright screenshot.
     """
+    # --- Strategy 1: fast HTML scrape via httpx ---
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
             resp = await client.get(url, headers=HEADERS)
             logger.info(f"Scrape {url[:80]} → HTTP {resp.status_code}")
             resp.raise_for_status()
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        if "kijiji.ca" in url.lower():
+            listing = _extract_kijiji(soup, url)
+        else:
+            listing = _extract_generic(soup, url)
+
+        has_useful_data = listing.get("title") or listing.get("description") or listing.get("images")
+
+        logger.info(
+            f"Scrape résultat: title={listing.get('title', 'N/A')!r}, "
+            f"price={listing.get('price', 'N/A')!r}, "
+            f"images={len(listing.get('images', []))}, "
+            f"description={bool(listing.get('description'))}"
+        )
+
+        if has_useful_data:
+            return listing
+        else:
+            logger.info("HTML scrape vide — tentative screenshot Playwright")
+
     except httpx.TimeoutException:
         logger.warning(f"Timeout lors du scraping de {url[:80]}")
-        return None
     except httpx.HTTPError as e:
         logger.warning(f"Erreur HTTP lors du scraping de {url[:80]}: {e}")
-        return None
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-
-    if "kijiji.ca" in url.lower():
-        listing = _extract_kijiji(soup, url)
-    else:
-        listing = _extract_generic(soup, url)
-
-    logger.info(
-        f"Scrape résultat: title={listing.get('title', 'N/A')!r}, "
-        f"price={listing.get('price', 'N/A')!r}, "
-        f"images={len(listing.get('images', []))}, "
-        f"description={bool(listing.get('description'))}"
-    )
-    return listing
+    # --- Strategy 2: Playwright screenshot of the full page ---
+    return await screenshot_listing(url)
 
 
 def format_listing_context(listing: Dict) -> str:
@@ -287,6 +356,8 @@ def format_listing_context(listing: Dict) -> str:
         parts.append(f"Description : {listing['description']}")
     if listing.get("images"):
         parts.append(f"Photos dans l'annonce : {len(listing['images'])}")
+    if listing.get("screenshot"):
+        parts.append("Une capture d'écran de l'annonce a été prise et analysée.")
     parts.append(f"Lien : {listing['url']}")
 
     return "\n".join(parts)
