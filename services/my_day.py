@@ -72,9 +72,6 @@ def _format_entries(entries: List[Dict[str, Any]]) -> str:
                 lines.append(f"Diapason: {entry['tuning_pitch']}")
             if entry.get("notes"):
                 lines.append(f"Notes: {entry['notes']}")
-            if entry.get("parking"):
-                # Intentionally excluded — see prompt rules
-                pass
 
     return "\n".join(lines)
 
@@ -90,7 +87,12 @@ async def generate_my_day(entries: List[Dict[str, Any]]) -> str:
         Formatted daily briefing text.
     """
     system_prompt = load_my_day_prompt()
-    user_content = _format_entries(entries)
+    # Strip parking data before sending to LLM — must never appear in output
+    sanitized = []
+    for entry in entries:
+        clean = {k: v for k, v in entry.items() if k != "parking"}
+        sanitized.append(clean)
+    user_content = _format_entries(sanitized)
 
     response = client.chat.completions.create(
         model="gpt-4o",
