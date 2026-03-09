@@ -35,9 +35,10 @@ app.add_middleware(
 )
 
 # Include routers
-from routes import chat, analyze
+from routes import chat, analyze, my_day
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(analyze.router, prefix="/api", tags=["analyze"])
+app.include_router(my_day.router, prefix="/api", tags=["my-day"])
 
 @app.get("/")
 def root():
