@@ -1,5 +1,5 @@
 import os
-import json
+import re
 from openai import OpenAI
 from dotenv import load_dotenv
 from typing import List, Dict, Any
@@ -20,6 +20,43 @@ def load_my_day_prompt() -> str:
             return f.read().strip()
     except FileNotFoundError:
         return "Tu génères un résumé de journée pour un technicien de piano."
+
+
+# Patterns to strip from free-text fields (parking/stationnement mentions)
+_PARKING_PATTERNS = [
+    re.compile(r"[^.!?\n]*(?:stationnement|parking)[^.!?\n]*[.!?\n]?\s*", re.IGNORECASE),
+    re.compile(r"[^.!?\n]*prévoir\s+\d+\s*\$[^.!?\n]*[.!?\n]?\s*", re.IGNORECASE),
+]
+
+
+def _scrub_parking_text(text: str) -> str:
+    """Remove any sentence or phrase mentioning parking/stationnement from text."""
+    result = text
+    for pattern in _PARKING_PATTERNS:
+        result = pattern.sub("", result)
+    return result.strip()
+
+
+def _sanitize_entries(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Remove all parking data from entries — both dedicated fields and embedded text."""
+    sanitized = []
+    for entry in entries:
+        clean = {}
+        for key, value in entry.items():
+            if key == "parking":
+                continue
+            if isinstance(value, str):
+                clean[key] = _scrub_parking_text(value)
+            elif isinstance(value, list):
+                clean[key] = [
+                    _scrub_parking_text(item) if isinstance(item, str) else item
+                    for item in value
+                    if not (isinstance(item, str) and re.search(r"stationnement|parking", item, re.IGNORECASE))
+                ]
+            else:
+                clean[key] = value
+        sanitized.append(clean)
+    return sanitized
 
 
 def _format_entries(entries: List[Dict[str, Any]]) -> str:
@@ -87,11 +124,7 @@ async def generate_my_day(entries: List[Dict[str, Any]]) -> str:
         Formatted daily briefing text.
     """
     system_prompt = load_my_day_prompt()
-    # Strip parking data before sending to LLM — must never appear in output
-    sanitized = []
-    for entry in entries:
-        clean = {k: v for k, v in entry.items() if k != "parking"}
-        sanitized.append(clean)
+    sanitized = _sanitize_entries(entries)
     user_content = _format_entries(sanitized)
 
     response = client.chat.completions.create(
