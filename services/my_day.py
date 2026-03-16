@@ -95,6 +95,12 @@ def _format_entries(entries: List[Dict[str, Any]]) -> str:
                 lines.append("Services à effectuer:")
                 for svc in entry["services"]:
                     lines.append(f"  - {svc}")
+            if entry.get("completed_tasks"):
+                lines.append("DÉJÀ COMPLÉTÉ (ne pas refaire):")
+                for task in entry["completed_tasks"]:
+                    lines.append(f"  - ✅ {task}")
+            if entry.get("prep_notes"):
+                lines.append(f"Notes de préparation: {entry['prep_notes']}")
             if entry.get("previous_services"):
                 lines.append("Services précédents:")
                 for svc in entry["previous_services"]:
