@@ -31,7 +31,7 @@ class DayEntry(BaseModel):
 
     # Professional appointment fields
     client_name: Optional[str] = None
-    client_since: Optional[str] = None
+    client_since: Optional[str] = None  # descriptive, e.g. "fidèle depuis 20 ans" or raw date from CRM
     location: Optional[str] = None
     piano: Optional[PianoInfo] = None
     services: Optional[List[str]] = None

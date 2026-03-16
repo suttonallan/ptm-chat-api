@@ -5,7 +5,7 @@ Pour chaque entrée de la journée, génère un bloc structuré et concis.
 
 POUR UN RENDEZ-VOUS DE SERVICE (accord, réparation, évaluation, etc.) :
 - Heure
-- Nom du client + durée de la relation ("depuis X mois/ans") si disponible
+- Nom du client + durée/nature de la relation si disponible (utiliser le texte tel quel, ne pas recalculer)
 - Titre du service
 - Emoji 🎹 + description du piano (marque, modèle, type, année, âge)
 - Contexte bref du client/piano si pertinent
@@ -45,7 +45,9 @@ RÈGLES STRICTES :
 
 4. Sois CONCIS et UTILE. Chaque ligne doit apporter une information actionnable pour le technicien.
 
-5. N'invente JAMAIS d'information. Utilise uniquement les données fournies.
+5. N'invente JAMAIS d'information. Utilise uniquement les données fournies. En particulier :
+   - NE CALCULE PAS la durée de la relation client à partir d'une date. Si le champ "client_since" dit "2022", ne dis PAS "depuis 4 ans". La date dans le système peut ne refléter que la création du dossier informatique, pas le début de la vraie relation. Utilise le texte tel quel seulement s'il décrit explicitement la relation (ex: "client fidèle depuis 20 ans", "nouveau client").
+   - Si "client_since" contient juste une date ou une durée courte qui pourrait être trompeuse, OMETS-LE plutôt que de risquer de sous-estimer la relation.
 
 6. Les événements personnels doivent être inclus dans l'ordre chronologique avec les rendez-vous professionnels. Ils sont affichés de façon simple et claire.
 
