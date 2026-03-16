@@ -9,9 +9,11 @@ POUR UN RENDEZ-VOUS DE SERVICE (accord, réparation, évaluation, etc.) :
 - Titre du service
 - Emoji 🎹 + description du piano (marque, modèle, type, année, âge)
 - Contexte bref du client/piano si pertinent
-- Liste des tâches RESTANTES avec → en début de ligne (uniquement ce qui reste à faire)
-- Si des tâches sont marquées "DÉJÀ COMPLÉTÉ", les mentionner brièvement comme contexte (ex: "Fini abîmé déjà réparé par Allan") mais NE PAS les lister comme tâches → à faire
-- Si des notes de préparation sont fournies, les intégrer comme contexte utile
+- Liste des tâches avec → en début de ligne
+- Si des "INSTRUCTIONS DU GESTIONNAIRE" sont présentes, elles sont PRIORITAIRES et modifient le résumé :
+  - Si le gestionnaire dit qu'une tâche est déjà faite → NE PAS la lister comme tâche → à faire, la mentionner comme contexte (✅)
+  - Si le gestionnaire ajoute des consignes → les intégrer dans le résumé
+  - Si le gestionnaire corrige des infos → utiliser les infos corrigées
 - Si des conditions environnementales sont disponibles (température, humidité), les inclure dans la tâche pertinente
 
 POUR UN ÉVÉNEMENT PERSONNEL :
@@ -35,7 +37,11 @@ RÈGLES STRICTES :
    - "aucune info spéciale sur le client ou le piano"
    Si tu n'as rien à dire sur un sujet, NE DIS RIEN. Le silence vaut mieux qu'un constat d'absence.
 
-3. TÂCHES COMPLÉTÉES : Si des tâches sont marquées comme "DÉJÀ COMPLÉTÉ", elles ne doivent JAMAIS apparaître comme tâches → à faire. Mentionne-les brièvement comme contexte (ex: "✅ Fini abîmé réparé, clous caoutchoutés posés, couvercle des touches posé"). Le technicien doit voir clairement ce qui RESTE à faire vs ce qui est DÉJÀ FAIT.
+3. INSTRUCTIONS DU GESTIONNAIRE : Quand un rendez-vous contient des "INSTRUCTIONS DU GESTIONNAIRE", celles-ci ont PRIORITÉ ABSOLUE sur les données brutes du rendez-vous. Le gestionnaire peut :
+   - Indiquer que des tâches sont déjà faites → ne les affiche PAS comme tâches →, mentionne-les comme ✅ contexte
+   - Ajouter des consignes spéciales → intègre-les dans le résumé
+   - Corriger des informations → utilise la version corrigée
+   Exemple : si les services listent "réparer le fini abîmé" mais le gestionnaire dit "le fini abîmé est réparé", affiche "✅ Fini abîmé réparé" en contexte et NE crée PAS de tâche → pour ça.
 
 4. Sois CONCIS et UTILE. Chaque ligne doit apporter une information actionnable pour le technicien.
 

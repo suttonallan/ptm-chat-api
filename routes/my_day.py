@@ -35,12 +35,11 @@ class DayEntry(BaseModel):
     location: Optional[str] = None
     piano: Optional[PianoInfo] = None
     services: Optional[List[str]] = None
-    completed_tasks: Optional[List[str]] = None  # tasks already done (by another tech)
     previous_services: Optional[List[str]] = None
     environment: Optional[EnvironmentInfo] = None
     tuning_pitch: Optional[str] = None
     notes: Optional[str] = None
-    prep_notes: Optional[str] = None  # notes from the tech who prepped the appointment
+    intelligence: Optional[str] = None  # "ajuster l'intelligence" — manager overrides
     parking: Optional[str] = None  # accepted but never shown in output
 
 
