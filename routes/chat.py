@@ -6,8 +6,7 @@ import logging
 from services.openai_chat import get_chat_response
 from services.piano_analysis import analyze_piano_images
 from services.url_scraper import find_urls, scrape_listing, format_listing_context, download_listing_images
-from limiter import limiter, can_analyze, record_analysis, analyses_remaining
-from slowapi.util import get_remote_address
+from limiter import limiter, can_analyze, record_analysis, analyses_remaining, client_ip as get_remote_address
 
 logger = logging.getLogger("piano-tek-ai")
 
@@ -15,6 +14,41 @@ router = APIRouter()
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGES = 3
+
+FRIENDLY_ERROR = (
+    "Désolé, je ne peux pas répondre pour le moment. "
+    "Appelez-nous au 514 344-8008 : un membre de l'équipe se fera un plaisir de vous aider."
+)
+FRIENDLY_PHOTO_ERROR = (
+    "Désolé, je n'ai pas pu analyser vos photos pour le moment. "
+    "Réessayez dans quelques minutes, ou appelez-nous au 514 344-8008."
+)
+
+_ALLOWED_RESULT_KEYS = {
+    "success", "marque_detectee", "modele_detecte", "annee_estimee", "historique_marque",
+    "type_mecanique", "alertes", "recommandation_achat", "verdict", "score", "etat_general",
+    "etat_clavier", "etat_boitier", "etat_mecanique_visible", "problemes_detectes",
+    "points_positifs", "travaux_recommandes", "potentiel_restauration", "commentaire_expert",
+    "recommandation_contextuelle", "prochaine_etape", "urgence_intervention",
+    "photos_recues", "photos_suggerees",
+}
+
+
+def _clean_result(result):
+    """Le résultat d'analyse renvoyé par le navigateur n'est pas fiable : on ne garde
+    que les champs connus, tronqués, pour qu'on ne puisse pas glisser d'instructions au chat."""
+    if not isinstance(result, dict):
+        return None
+    def cut(v):
+        if isinstance(v, str):
+            return v[:600]
+        if isinstance(v, list):
+            return [cut(x) for x in v[:10]]
+        if isinstance(v, dict):
+            return {str(k)[:40]: cut(x) for k, x in list(v.items())[:10]}
+        return v if isinstance(v, (int, float, bool)) or v is None else None
+    return {k: cut(v) for k, v in result.items() if k in _ALLOWED_RESULT_KEYS}
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -34,7 +68,7 @@ async def chat_endpoint(request: Request, body: ChatRequest):
     try:
         # Detect URLs in the user message and scrape listing data
         listing_context = None
-        expertise_result = body.expertise_result
+        expertise_result = _clean_result(body.expertise_result)
         urls = find_urls(body.message)
         if urls:
             logger.info(f"URL détectée dans le message: {urls[0][:80]}")
@@ -91,7 +125,8 @@ async def chat_endpoint(request: Request, body: ChatRequest):
         )
         return ChatUploadResponse(reply=reply, expertise_result=expertise_result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Erreur /chat: {e}")
+        raise HTTPException(status_code=500, detail=FRIENDLY_ERROR)
 
 
 @router.post("/chat-upload", response_model=ChatUploadResponse)
@@ -108,10 +143,10 @@ async def chat_upload_endpoint(
     if remaining <= 0:
         raise HTTPException(
             status_code=429,
-            detail="Vous avez atteint la limite de 3 analyses photo gratuites par jour. "
-                   "Pour des analyses supplémentaires, réservez une consultation Zoom "
-                   "d'accompagnement à l'achat (60$) : "
-                   "https://gazelleapp.io/scheduling/6tMdQhXdCXDzd1PQBKxhzGmJ#/address",
+            detail="Vous avez utilisé vos 3 premiers avis photo d'aujourd'hui. "
+                   "Pour aller plus loin, un technicien peut vous accompagner en consultation à distance "
+                   "(80 $ pour 30 min, 150 $ pour 60 min) : https://zoompianoconsultation.setmore.com/ "
+                   "ou appelez-nous au 514 344-8008.",
         )
 
     if len(images) < 1 or len(images) > MAX_IMAGES:
@@ -154,7 +189,11 @@ async def chat_upload_endpoint(
 
         return ChatUploadResponse(reply=reply, expertise_result=expertise_result)
 
-    except HTTPException:
+    except HTTPException as he:
+        if he.status_code >= 500:
+            logger.error(f"Erreur /chat-upload: {he.detail}")
+            raise HTTPException(status_code=he.status_code, detail=FRIENDLY_PHOTO_ERROR)
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
+        logger.error(f"Erreur /chat-upload: {e}")
+        raise HTTPException(status_code=500, detail=FRIENDLY_PHOTO_ERROR)

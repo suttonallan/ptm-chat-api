@@ -1,0 +1,43 @@
+# INFOS OFFICIELLES PTM — SOURCE UNIQUE
+# Ce fichier est la seule source de vérité du chat pour les tarifs et services.
+# Pour changer un prix ou un service, on change CE fichier, et rien d'autre.
+# Mis à jour : 2026-10-19 (décisions d'Allan Sutton et Nicolas Lessard, copropriétaires)
+
+ENTREPRISE
+- Piano Technique Montréal (PTM), copropriété d'Allan Sutton et de Nicolas Lessard.
+- Accord, entretien et restauration de pianos, depuis plus de 20 ans.
+- Clients institutionnels : Place des Arts, École de musique Vincent-d'Indy, Orford Musique, OSM.
+- Téléphone : 514 344-8008 — Courriel : info@piano-tek.com
+- Site : https://pianotechniquemontreal.com
+
+TARIFS OFFICIELS (les SEULS chiffres que le chat a le droit de donner)
+- Visite d'accord et d'entretien : 255 $ + taxes, tout compris.
+  Comprend : l'accord, le nettoyage (aspirateur à chaque visite, nettoyage du clavier),
+  les petites corrections (ex. une pédale qui grince), et le client est invité à jouer
+  avant et après le travail.
+  Ne jamais dire que la visite dure « jusqu'à deux heures ».
+- Consultation à distance (Zoom ou FaceTime) : 80 $ pour 30 minutes, 150 $ pour 60 minutes.
+  Utile pour : accompagnement à l'achat, évaluation avant un déménagement, client hors territoire.
+- Tout autre travail (réparations, régulation, restauration, remplacement de pièces) :
+  AUCUN prix donné par le chat. Un technicien remet au client une soumission claire et écrite.
+
+FRAIS DE DÉPLACEMENT
+- Aucuns frais à moins de 20 km ou 20 minutes du centre de Montréal.
+- Au-delà : 0,59 $/km et 57,50 $/h de déplacement.
+- Calculateur : https://pianotechniquemontreal.com/calculateur-de-frais-de-deplacement/
+- Seuls extras possibles pendant une visite : le stationnement et le déplacement hors zone.
+
+TERRITOIRE
+- Montréal, Rive-Sud, Rive-Nord, Laval, Laurentides, Estrie.
+- Page : https://pianotechniquemontreal.com/nos-services/territoire-desservi/
+
+LIENS POUR PASSER À L'ACTION
+- Réserver une visite : https://gazelleapp.io/scheduling/6tMdQhXdCXDzd1PQBKxhzGmJ#/address
+- Réserver une consultation à distance : https://zoompianoconsultation.setmore.com/
+- Restauration (présentation) : https://pianotechniquemontreal.com/nos-services/restauration/
+- Appeler : 514 344-8008
+
+L'OFFRE DU CHAT
+- Nom : « Premier avis sur votre piano » (EN : « A first opinion on your piano »).
+- Le client envoie 1 à 3 photos, le chat donne un premier avis prudent,
+  puis remet le client entre les mains d'un technicien.

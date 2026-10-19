@@ -2,7 +2,18 @@ from datetime import date
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/day"])
+
+def client_ip(request) -> str:
+    """Vraie adresse du visiteur : Render place le serveur derrière un relais,
+    qui transmet l'adresse d'origine dans X-Forwarded-For. Sans ça, tous les
+    visiteurs partageraient la même limite."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=client_ip, default_limits=["100/day"])
 
 # --- Photo analysis limiter (Gemini calls are expensive) ---
 

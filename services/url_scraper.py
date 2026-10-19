@@ -50,10 +50,41 @@ def find_urls(text: str) -> List[str]:
     return URL_PATTERN.findall(text)
 
 
+_SITE_HOSTS = ("kijiji.ca", "lespac.com", "craigslist.org", "marketplace.facebook.com")
+
+
+def _host(url: str) -> str:
+    from urllib.parse import urlparse
+    try:
+        return (urlparse(url).hostname or "").lower()
+    except Exception:
+        return ""
+
+
 def _is_supported(url: str) -> bool:
-    """Check if a URL belongs to a supported classified-ad site."""
-    lower = url.lower()
-    return any(domain in lower for domain in SUPPORTED_DOMAINS)
+    """Vrai seulement si le NOM DE DOMAINE réel est un site d'annonces connu (pas une portion du texte)."""
+    from urllib.parse import urlparse
+    if not url.lower().startswith(("https://", "http://")):
+        return False
+    host = _host(url)
+    if any(host == d or host.endswith("." + d) for d in _SITE_HOSTS):
+        return True
+    return (host == "facebook.com" or host.endswith(".facebook.com")) and urlparse(url).path.lower().startswith("/marketplace")
+
+
+def _is_public_image_url(url: str) -> bool:
+    """Bloque les adresses internes (localhost, adresses IP privées) pour le téléchargement d'images."""
+    import ipaddress
+    if not url.lower().startswith("https://"):
+        return False
+    host = _host(url)
+    if not host or host == "localhost" or host.endswith(".local") or host.endswith(".internal"):
+        return False
+    try:
+        ip = ipaddress.ip_address(host)
+        return ip.is_global
+    except ValueError:
+        return "." in host
 
 
 def _extract_og_images(soup: BeautifulSoup) -> List[str]:
@@ -217,6 +248,9 @@ async def download_listing_images(image_urls: List[str], max_images: int = MAX_L
         for img_url in urls_to_try:
             if len(images_data) >= max_images:
                 break
+            if not _is_public_image_url(img_url):
+                logger.warning(f"Image ignorée (adresse non publique): {img_url[:80]}")
+                continue
             try:
                 resp = await client.get(img_url, headers=HEADERS)
                 resp.raise_for_status()
@@ -245,6 +279,9 @@ async def scrape_listing(url: str) -> Optional[Dict]:
     Returns a dict with title, price, description, images, etc.
     Returns None if the page can't be fetched.
     """
+    if not _is_supported(url):
+        logger.info(f"Lien ignoré (site d'annonces non reconnu): {url[:80]}")
+        return None
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
             resp = await client.get(url, headers=HEADERS)
@@ -259,7 +296,7 @@ async def scrape_listing(url: str) -> Optional[Dict]:
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    if "kijiji.ca" in url.lower():
+    if _host(url).endswith("kijiji.ca"):
         listing = _extract_kijiji(soup, url)
     else:
         listing = _extract_generic(soup, url)

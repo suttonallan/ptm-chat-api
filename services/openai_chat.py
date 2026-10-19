@@ -13,6 +13,37 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Structure: { session_id: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}] }
 conversation_history: Dict[str, List[Dict[str, str]]] = {}
 
+# Modèle de conversation : jamais codé en dur. OPENAI_MODEL (variable Render) l'impose ;
+# sinon gpt-4o, et si OpenAI le retire, on choisit le plus récent modèle « gpt-N » général.
+_chat_model = None
+
+
+def _is_model_gone(err: Exception) -> bool:
+    msg = str(err).lower()
+    return any(k in msg for k in ("model_not_found", "does not exist", "no longer available", "deprecated", "404"))
+
+
+def _discover_chat_model() -> str:
+    import re as _re
+    try:
+        ids = [m.id for m in client.models.list().data]
+    except Exception:
+        return "gpt-4o"
+    good = [i for i in ids if _re.fullmatch(r"gpt-\d+(\.\d+)?o?", i)]
+    if not good:
+        return "gpt-4o"
+    return sorted(good, key=lambda i: float(_re.findall(r"\d+(?:\.\d+)?", i)[0]), reverse=True)[0]
+
+
+def get_chat_model(force_discovery: bool = False) -> str:
+    global _chat_model
+    if force_discovery:
+        _chat_model = _discover_chat_model()
+    elif not _chat_model:
+        _chat_model = os.getenv("OPENAI_MODEL") or "gpt-4o"
+    return _chat_model
+
+
 def load_system_prompt() -> str:
     """Load system prompt from prompts/system.txt"""
     import os
@@ -21,11 +52,19 @@ def load_system_prompt() -> str:
     project_root = os.path.dirname(current_dir)
     prompt_path = os.path.join(project_root, "prompts", "system.txt")
     
+    infos_path = os.path.join(project_root, "prompts", "infos_ptm.txt")
     try:
         with open(prompt_path, "r", encoding="utf-8") as f:
-            return f.read().strip()
+            prompt = f.read().strip()
     except FileNotFoundError:
-        return "You are a helpful assistant for Piano Technique Montréal."
+        prompt = "Tu es l'assistant de Piano Technique Montréal. Vouvoie le client et propose d'appeler au 514 344-8008."
+    try:
+        with open(infos_path, "r", encoding="utf-8") as f:
+            infos = "\n".join(l for l in f.read().splitlines() if not l.startswith("#"))
+        prompt += "\n\n## INFOS OFFICIELLES PTM\n" + infos.strip()
+    except FileNotFoundError:
+        pass
+    return prompt
 
 async def get_chat_response(
     message: str,
@@ -59,7 +98,6 @@ async def get_chat_response(
             f"**Modèle:** {expertise_result.get('modele_detecte', 'N/A')}",
             f"**Âge estimé:** {expertise_result.get('annee_estimee', 'N/A')}",
             f"**Verdict:** {expertise_result.get('verdict', 'N/A')}",
-            f"**Score global:** {expertise_result.get('score', 'N/A')}/10",
             f"**Type de mécanique:** {expertise_result.get('type_mecanique', 'Standard')}",
             f"**Recommandation d'achat:** {expertise_result.get('recommandation_achat', 'N/A')}",
         ]
@@ -94,20 +132,12 @@ async def get_chat_response(
             for p in points:
                 lines.append(f"  • {p}")
 
-        historique = expertise_result.get("historique_marque")
-        if historique:
-            lines.append(f"- Historique de la marque: {historique}")
 
         travaux = expertise_result.get("travaux_recommandes")
         if travaux:
-            lines.append("**Travaux recommandés:**")
+            lines.append("**Travaux à faire vérifier par un technicien (sans prix) :**")
             for t in travaux:
-                lines.append(f"  • {t.get('travail', '')} (priorité: {t.get('priorite', '')}, coût: {t.get('cout_estime', '')})")
-
-        valeur = expertise_result.get("valeur_marche_estimee")
-        if valeur:
-            lines.append(f"**Valeur sans travaux:** {valeur.get('sans_travaux', 'N/A')}")
-            lines.append(f"**Valeur avec travaux:** {valeur.get('avec_travaux', 'N/A')}")
+                lines.append(f"  • {t.get('travail', '')} (priorité: {t.get('priorite', '')})")
 
         if expertise_result.get("potentiel_restauration"):
             lines.append(f"**Potentiel de restauration:** {expertise_result['potentiel_restauration']}")
@@ -115,13 +145,14 @@ async def get_chat_response(
             lines.append(f"**Urgence d'intervention:** {expertise_result['urgence_intervention']}")
         if expertise_result.get("recommandation_contextuelle"):
             lines.append(f"**Recommandation contextuelle:** {expertise_result['recommandation_contextuelle']}")
-        if expertise_result.get("prochaine_etape"):
-            lines.append(f"**Prochaine étape recommandée:** {expertise_result['prochaine_etape']}")
+        etape = expertise_result.get("prochaine_etape") or expertise_result.get("prochaine_etape_recommandee")
+        if etape:
+            lines.append(f"**Prochaine étape recommandée:** {etape}")
 
         lines.append(f"\n**Commentaire expert:** {expertise_result.get('commentaire_expert', 'N/A')}")
 
         lines.append("")
-        lines.append("Utilise TOUTES ces informations pour donner une réponse riche et détaillée au client. Mentionne l'historique de la marque, les points positifs, les problèmes, et les travaux recommandés. Sois conversationnel mais complet.")
+        lines.append("Présente ce premier avis selon tes consignes « QUAND TU PRÉSENTES UN AVIS PHOTO » : prudent, respectueux, sans aucun prix ni valeur en dollars, sans score, et termine par une seule prochaine étape.")
         photos_recues = expertise_result.get("photos_recues")
         if photos_recues:
             lines.append(f"- Photos reçues du client: {', '.join(photos_recues)}")
@@ -151,15 +182,25 @@ async def get_chat_response(
     # Allow longer replies when presenting a piano analysis
     token_limit = 1200 if expertise_result else 500
 
-    # Call OpenAI API
+    # Call OpenAI API (modèle choisi automatiquement, rebascule si OpenAI en retire un)
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=token_limit,
-        )
-        
+        try:
+            response = client.chat.completions.create(
+                model=get_chat_model(),
+                messages=messages,
+                temperature=0.5,
+                max_tokens=token_limit,
+            )
+        except Exception as e:
+            if not _is_model_gone(e):
+                raise
+            response = client.chat.completions.create(
+                model=get_chat_model(force_discovery=True),
+                messages=messages,
+                temperature=0.5,
+                max_tokens=token_limit,
+            )
+
         assistant_reply = response.choices[0].message.content
         
         # Update conversation history

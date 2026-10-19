@@ -49,7 +49,9 @@ async def analyze_endpoint(
     except HTTPException:
         raise
     except Exception as e:
+        import logging
+        logging.getLogger("piano-tek-ai").error(f"Erreur /analyze: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Erreur lors de l'analyse : {str(e)}",
+            detail="Désolé, l'analyse n'a pas pu être effectuée. Appelez-nous au 514 344-8008.",
         )

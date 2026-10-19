@@ -81,7 +81,7 @@ Examine attentivement les photos et évalue:
 4. **État du boîtier** - Finition, rayures, fissures, veneer décollé
 5. **État du clavier** - Touches ivoire/plastique, jaunissement, ébréchures, niveau
 6. **Signes de problèmes** - Humidité, moisissure, pièces manquantes, réparations visibles
-7. **Historique de la marque** - Donne un historique riche et intéressant de la marque identifiée : origine, fondateur, pays de fabrication, réputation, période dorée, faits marquants ou anecdotes. Sois généreux — les clients adorent en apprendre sur l'histoire de leur piano.
+7. **Historique de la marque** - Donne un bref historique de la marque identifiée (origine, pays de fabrication, réputation), en t'en tenant aux faits sûrs. Si la marque n'est pas certaine, dis-le plutôt que de deviner.
 
 ## Format de réponse OBLIGATOIRE
 
@@ -89,7 +89,7 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
 
 {
     "marque": "Marque identifiée ou 'Non identifiable'",
-    "historique_marque": "Historique riche de la marque (4-6 phrases : origine, fondateur, réputation, faits marquants)",
+    "historique_marque": "Bref historique de la marque (2-3 phrases, faits sûrs seulement ; vide si marque incertaine)",
     "modele": "Modèle si visible ou 'Non visible'",
     "type_piano": "Droit|Queue",
     "type_mecanique": "Standard|Drop-action (spinet)",
@@ -102,11 +102,10 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
     "problemes_detectes": ["..."],
     "points_positifs": ["..."],
     "alertes": ["DROP-ACTION", "TABLE D'HARMONIE FISSURÉE", etc. — liste vide [] si aucune alerte],
-    "travaux_recommandes": [{"travail": "...", "priorite": "HAUTE", "cout_estime": "150-200$"}],
+    "travaux_recommandes": [{"travail": "...", "priorite": "HAUTE"}],
     "score_global": 7,
     "verdict": "EXCELLENT|BON|ACCEPTABLE|NÉCESSITE TRAVAUX|PROBLÉMATIQUE",
     "recommandation_achat": "OUI|OUI AVEC RÉSERVES|NON|ABSOLUMENT PAS",
-    "valeur_marche_estimee": {"sans_travaux": "1500-2000$", "avec_travaux": "3000-4000$"},
     "potentiel_restauration": "ÉLEVÉ|MOYEN|FAIBLE|NON RECOMMANDÉ",
     "commentaire_expert": "Un paragraphe de recommandation personnalisée...",
     "urgence_intervention": "AUCUNE|FAIBLE|MOYENNE|HAUTE",
@@ -116,7 +115,7 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
     "photos_suggerees": ["Photos supplémentaires qui amélioreraient l'évaluation (ex: 'Intérieur du piano (marteaux et cordes, en ouvrant le couvercle supérieur)', 'Numéro de série'). Liste vide si les photos sont suffisantes."]
 }
 
-Les scores sont sur 10. Sois honnête mais encourageant.
+Les scores sont sur 10 (usage interne seulement). Sois honnête, prudent et respectueux. N'indique AUCUN prix, coût ni valeur en dollars.
 IMPORTANT: Retourne UNIQUEMENT le JSON valide, sans texte avant ou après."""
 
 
@@ -243,7 +242,6 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
         "problemes_detectes": analysis.get("problemes_detectes", []),
         "points_positifs": analysis.get("points_positifs", []),
         "travaux_recommandes": analysis.get("travaux_recommandes", []),
-        "valeur_marche_estimee": analysis.get("valeur_marche_estimee", {}),
         "potentiel_restauration": analysis.get("potentiel_restauration", ""),
         "commentaire_expert": analysis.get("commentaire_expert", ""),
         "recommandation_contextuelle": analysis.get("recommandation_contextuelle", ""),
