@@ -120,13 +120,49 @@ Les scores sont sur 10. Sois honnête mais encourageant.
 IMPORTANT: Retourne UNIQUEMENT le JSON valide, sans texte avant ou après."""
 
 
-def get_gemini_model():
+# Modèle Gemini : jamais codé en dur. GEMINI_MODEL (variable d'environnement Render)
+# l'impose ; sinon on choisit automatiquement le modèle « flash » stable le plus récent
+# offert par Google, et on rebascule tout seul si Google en retire un (erreur 404).
+_resolved_model_name = None
+_EXCLUDED = ('lite', 'image', 'tts', 'audio', 'live', 'thinking', 'exp', 'preview', 'embedding', '8b')
+
+
+def _version_key(name: str):
+    nums = re.findall(r'\d+(?:\.\d+)?', name)
+    return tuple(float(n) for n in nums) if nums else (0.0,)
+
+
+def _discover_model_name(genai) -> str:
+    try:
+        names = [m.name for m in genai.list_models()
+                 if 'generateContent' in getattr(m, 'supported_generation_methods', [])]
+    except Exception as e:
+        logger.error(f"Impossible de lister les modèles Gemini: {e}")
+        return 'gemini-flash-latest'
+    flash = [n for n in names if 'flash' in n and not any(x in n for x in _EXCLUDED)]
+    if not flash:
+        return 'gemini-flash-latest'
+    best = sorted(flash, key=_version_key, reverse=True)[0]
+    return best.replace('models/', '')
+
+
+def get_gemini_model(force_discovery: bool = False):
+    global _resolved_model_name
     gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
     if not gemini_api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY non configuré")
     import google.generativeai as genai
     genai.configure(api_key=gemini_api_key)
-    return genai.GenerativeModel('gemini-2.0-flash')
+    if force_discovery or not _resolved_model_name:
+        env_model = os.getenv('GEMINI_MODEL')
+        _resolved_model_name = env_model if (env_model and not force_discovery) else _discover_model_name(genai)
+        logger.info(f"Modèle Gemini utilisé : {_resolved_model_name}")
+    return genai.GenerativeModel(_resolved_model_name)
+
+
+def _is_model_gone(err: Exception) -> bool:
+    msg = str(err).lower()
+    return '404' in msg or 'not found' in msg or 'no longer available' in msg
 
 
 def parse_gemini_json(response_text: str) -> dict:
@@ -156,7 +192,14 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
         contents.append({"mime_type": img_data["mime_type"], "data": image_bytes})
 
     try:
-        response = await model.generate_content_async(contents)
+        try:
+            response = await model.generate_content_async(contents)
+        except Exception as e:
+            if not _is_model_gone(e):
+                raise
+            logger.warning(f"Modèle Gemini retiré ({e}) — recherche d'un modèle à jour")
+            model = get_gemini_model(force_discovery=True)
+            response = await model.generate_content_async(contents)
     except Exception as e:
         logger.error(f"Erreur appel Gemini: {e}")
         raise HTTPException(status_code=502, detail=f"Erreur de communication avec le service d'analyse: {str(e)}")
