@@ -70,7 +70,7 @@ async def complete(system: str, messages: List[Dict], max_tokens: int = 800,
     async def call(model: str):
         return await get_client().messages.create(
             model=model, system=system, messages=messages,
-            max_tokens=max_tokens, temperature=temperature,
+            max_tokens=max_tokens,
         )
     try:
         resp = await call(await get_model())
