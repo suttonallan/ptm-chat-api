@@ -1,48 +1,15 @@
 import os
-from openai import OpenAI
 from dotenv import load_dotenv
+from services.claude_ai import complete
 from typing import Optional, Dict, Any, List
 
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # In-memory conversation history storage
 # Structure: { session_id: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}] }
 conversation_history: Dict[str, List[Dict[str, str]]] = {}
-
-# Modèle de conversation : jamais codé en dur. OPENAI_MODEL (variable Render) l'impose ;
-# sinon gpt-4o, et si OpenAI le retire, on choisit le plus récent modèle « gpt-N » général.
-_chat_model = None
-
-
-def _is_model_gone(err: Exception) -> bool:
-    msg = str(err).lower()
-    return any(k in msg for k in ("model_not_found", "does not exist", "no longer available", "deprecated", "404"))
-
-
-def _discover_chat_model() -> str:
-    import re as _re
-    try:
-        ids = [m.id for m in client.models.list().data]
-    except Exception:
-        return "gpt-4o"
-    good = [i for i in ids if _re.fullmatch(r"gpt-\d+(\.\d+)?o?", i)]
-    if not good:
-        return "gpt-4o"
-    return sorted(good, key=lambda i: float(_re.findall(r"\d+(?:\.\d+)?", i)[0]), reverse=True)[0]
-
-
-def get_chat_model(force_discovery: bool = False) -> str:
-    global _chat_model
-    if force_discovery:
-        _chat_model = _discover_chat_model()
-    elif not _chat_model:
-        _chat_model = os.getenv("OPENAI_MODEL") or "gpt-4o"
-    return _chat_model
-
 
 def load_system_prompt() -> str:
     """Load system prompt from prompts/system.txt"""
@@ -73,7 +40,7 @@ async def get_chat_response(
     listing_context: Optional[str] = None,
 ) -> str:
     """
-    Generate a chat response using OpenAI GPT-4o
+    Generate a chat response using Claude
     
     Args:
         message: User's message
@@ -182,27 +149,12 @@ async def get_chat_response(
     # Allow longer replies when presenting a piano analysis
     token_limit = 1200 if expertise_result else 500
 
-    # Call OpenAI API (modèle choisi automatiquement, rebascule si OpenAI en retire un)
+    # Claude : les consignes « system » sont regroupées, la conversation suit
+    system_text = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
+    convo = [m for m in messages if m["role"] != "system"]
     try:
-        try:
-            response = client.chat.completions.create(
-                model=get_chat_model(),
-                messages=messages,
-                temperature=0.5,
-                max_tokens=token_limit,
-            )
-        except Exception as e:
-            if not _is_model_gone(e):
-                raise
-            response = client.chat.completions.create(
-                model=get_chat_model(force_discovery=True),
-                messages=messages,
-                temperature=0.5,
-                max_tokens=token_limit,
-            )
+        assistant_reply = await complete(system_text, convo, max_tokens=token_limit, temperature=0.5)
 
-        assistant_reply = response.choices[0].message.content
-        
         # Update conversation history
         if session_id not in conversation_history:
             conversation_history[session_id] = []
@@ -217,4 +169,4 @@ async def get_chat_response(
         return assistant_reply
     
     except Exception as e:
-        raise Exception(f"Error calling OpenAI API: {str(e)}")
+        raise Exception(f"Erreur d'appel à Claude: {str(e)}")

@@ -50,28 +50,12 @@ def health():
 
 @app.get("/health/ai")
 async def health_ai():
-    """Vérifie que les deux IA répondent. Ne révèle aucune clé : seulement le modèle
+    """Vérifie que l'IA (Claude) répond. Ne révèle aucune clé : seulement le modèle
     utilisé et, en cas d'échec, le début du message d'erreur du fournisseur."""
     import os
-    from services.openai_chat import client, get_chat_model, _is_model_gone
-    out = {}
+    from services.claude_ai import complete, get_model
     try:
-        model = get_chat_model()
-        try:
-            client.chat.completions.create(model=model, messages=[{"role": "user", "content": "ok"}], max_tokens=3)
-        except Exception as e:
-            if not _is_model_gone(e):
-                raise
-            model = get_chat_model(force_discovery=True)
-            client.chat.completions.create(model=model, messages=[{"role": "user", "content": "ok"}], max_tokens=3)
-        out["conversation"] = {"ok": True, "model": model}
+        r = await complete("Réponds seulement : ok", [{"role": "user", "content": "test"}], max_tokens=5)
+        return {"ia": {"ok": True, "fournisseur": "Claude", "model": await get_model(), "reponse": r[:20]}}
     except Exception as e:
-        out["conversation"] = {"ok": False, "erreur": str(e)[:300], "cle_presente": bool(os.getenv("OPENAI_API_KEY"))}
-    try:
-        from services.piano_analysis import get_gemini_model
-        m = get_gemini_model()
-        r = await m.generate_content_async("Réponds seulement : ok")
-        out["analyse_photo"] = {"ok": True, "model": m.model_name, "reponse": (r.text or "")[:20]}
-    except Exception as e:
-        out["analyse_photo"] = {"ok": False, "erreur": str(e)[:300]}
-    return out
+        return {"ia": {"ok": False, "erreur": str(e)[:300], "cle_presente": bool(os.getenv("ANTHROPIC_API_KEY"))}}

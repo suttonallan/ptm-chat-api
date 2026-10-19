@@ -1,10 +1,9 @@
 fastapi
 uvicorn
-openai
+anthropic
 python-dotenv
 slowapi
 sqlalchemy
 python-multipart
-google-generativeai
 httpx
 beautifulsoup4
