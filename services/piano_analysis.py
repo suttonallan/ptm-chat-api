@@ -149,7 +149,7 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
     content.append({"type": "text", "text": "Voici les photos du piano. Fais l'analyse demandée et réponds uniquement avec le JSON."})
 
     try:
-        response_text = await complete(prompt, [{"role": "user", "content": content}], max_tokens=2000, temperature=0.2)
+        response_text = await complete(prompt, [{"role": "user", "content": content}], max_tokens=8000)
     except Exception as e:
         logger.error(f"Erreur appel Claude (analyse photo): {e}")
         raise HTTPException(status_code=502, detail=f"Erreur de communication avec le service d'analyse: {str(e)}")

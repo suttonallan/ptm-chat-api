@@ -147,7 +147,7 @@ async def get_chat_response(
     messages.append({"role": "user", "content": message})
     
     # Allow longer replies when presenting a piano analysis
-    token_limit = 1200 if expertise_result else 500
+    token_limit = 4000 if expertise_result else 2000
 
     # Claude : les consignes « system » sont regroupées, la conversation suit
     system_text = "\n\n".join(m["content"] for m in messages if m["role"] == "system")

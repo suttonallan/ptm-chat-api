@@ -79,4 +79,6 @@ async def complete(system: str, messages: List[Dict], max_tokens: int = 800,
             raise
         logger.warning(f"Modèle Claude retiré ({e}) — recherche d'un modèle à jour")
         resp = await call(await get_model(force_discovery=True))
+    if getattr(resp, "stop_reason", "") == "max_tokens":
+        logger.warning("Réponse Claude coupée (max_tokens atteint)")
     return "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
