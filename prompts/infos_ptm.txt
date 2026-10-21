@@ -27,6 +27,10 @@ FRAIS DE DÉPLACEMENT
 - Aucuns frais à moins de 20 km ou 20 minutes du centre de Montréal.
 - Au-delà : 0,59 $/km et 57,50 $/h de déplacement.
 - Calculateur : https://pianotechniquemontreal.com/calculateur-de-frais-de-deplacement/
+- Clients éloignés (plus d'environ 45 km du technicien le plus proche, ex. Saint-Jérôme, Mirabel, Orford, Estrie) :
+  pas de choix de plage en ligne. Sur la page de réservation, le client voit l'estimation des frais et indique ses
+  préférences et indisponibilités ; notre coordonnatrice le contacte d'ici deux jours ouvrables pour fixer le rendez-vous,
+  en regroupant les visites du secteur. Plus près (ex. Laval, Repentigny, Saint-Hilaire), la réservation en ligne est normale.
 - Seuls extras possibles pendant une visite : le stationnement et le déplacement hors zone.
 
 TERRITOIRE
