@@ -37,6 +37,7 @@ LIENS POUR PASSER À L'ACTION
 - Réserver une visite : https://ptm-reservation.onrender.com/
   (nouvelle page de réservation de PTM ; la demande arrive à l'équipe pour approbation.
    Adresse finale prévue : reserver.pianotechniquemontreal.com, à mettre ici dès qu'elle sera active.)
+- Réservation de secours (si la page ci-dessus ne s'ouvre pas) : https://gazelleapp.io/scheduling/6tMdQhXdCXDzd1PQBKxhzGmJ#/address
 - Réserver une consultation à distance : https://zoompianoconsultation.setmore.com/
 - Restauration (présentation) : https://pianotechniquemontreal.com/nos-services/restauration/
 - Appeler : 514 344-8008

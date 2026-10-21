@@ -21,7 +21,9 @@ FRIENDLY_ERROR = (
 )
 FRIENDLY_PHOTO_ERROR = (
     "Désolé, je n'ai pas pu analyser vos photos pour le moment. "
-    "Réessayez dans quelques minutes, ou appelez-nous au 514 344-8008."
+    "Vous pouvez réessayer dans quelques minutes, ou me décrire votre piano en quelques mots "
+    "(marque, type, âge, ce qui vous inquiète) et je vous donnerai un premier avis. "
+    "Vous pouvez aussi écrire à info@piano-tek.com avec vos photos."
 )
 
 _ALLOWED_RESULT_KEYS = {
