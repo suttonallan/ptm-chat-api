@@ -186,5 +186,5 @@ async def analyze_piano_images(images_data: list, notes: str = None) -> dict:
         "urgence_intervention": analysis.get("urgence_intervention", ""),
         "photos_recues": analysis.get("photos_recues", []),
         "photos_suggerees": analysis.get("photos_suggerees", []),
-        "url_zoom": "https://gazelleapp.io/scheduling/6tMdQhXdCXDzd1PQBKxhzGmJ#/address"
+        "url_reservation": "https://ptm-reservation.onrender.com/"
     }
