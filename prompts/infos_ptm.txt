@@ -32,6 +32,10 @@ FRAIS DE DÉPLACEMENT
   préférences et indisponibilités ; notre coordonnatrice le contacte d'ici deux jours ouvrables pour fixer le rendez-vous,
   en regroupant les visites du secteur. Plus près (ex. Laval, Repentigny, Saint-Hilaire), la réservation en ligne est normale.
 - Seuls extras possibles pendant une visite : le stationnement et le déplacement hors zone.
+- Stationnement : seulement dans les secteurs où il est difficile de stationner (Plateau-Mont-Royal, Mile End,
+  Milton-Parc, centre-ville, Vieux-Montréal, Griffintown, Petite-Bourgogne, Saint-Henri). Si le client n'a pas de place
+  à offrir au technicien, les frais de stationnement réels s'ajoutent, jusqu'à 12 $ au maximum. Ailleurs : aucuns frais.
+  Si le client est dans un de ces secteurs, demande-lui s'il a une place à offrir (entrée, stationnement de l'immeuble, vignette visiteur).
 
 TERRITOIRE
 - Montréal, Rive-Sud, Rive-Nord, Laval, Laurentides, Estrie.
