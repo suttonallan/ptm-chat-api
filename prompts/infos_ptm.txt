@@ -34,7 +34,7 @@ TERRITOIRE
 - Page : https://pianotechniquemontreal.com/nos-services/territoire-desservi/
 
 LIENS POUR PASSER À L'ACTION
-- Réserver une visite : https://reserver.pianotechniquemontreal.com
+- Réserver une visite : page de réservation en ligne (utilise le marqueur [[LIEN_RESERVATION]], voir tes consignes)
   (page de réservation en ligne de PTM ; la demande arrive à l'équipe pour approbation.)
 - Réservation de secours (si la page ci-dessus ne s'ouvre pas) : https://gazelleapp.io/scheduling/6tMdQhXdCXDzd1PQBKxhzGmJ#/address
 - Réserver une consultation à distance : https://zoompianoconsultation.setmore.com/

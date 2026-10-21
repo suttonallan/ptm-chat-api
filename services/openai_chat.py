@@ -158,6 +158,8 @@ async def get_chat_response(
         # Demande de rappel : marqueur retiré de la réponse, demande transmise à l'équipe
         from services.rappel import extraire, transmettre, ECHEC_FR, ECHEC_EN
         assistant_reply, demande = extraire(assistant_reply)
+        from services.lien_reservation import remplacer
+        assistant_reply = remplacer(assistant_reply)
         if demande is not None:
             historique = list(conversation_history.get(session_id, [])) + [
                 {"role": "user", "content": message}, {"role": "assistant", "content": assistant_reply}]
