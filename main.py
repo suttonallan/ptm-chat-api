@@ -35,9 +35,8 @@ app.add_middleware(
 )
 
 # Include routers
-from routes import chat, analyze
+from routes import chat
 app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(analyze.router, prefix="/api", tags=["analyze"])
 
 @app.get("/")
 def root():
@@ -48,14 +47,20 @@ def health():
     return {"status": "ok"}
 
 
+_sante_cache = {"t": 0.0, "r": None}
+
+
 @app.get("/health/ai")
 async def health_ai():
     """Vérifie que l'IA (Claude) répond. Ne révèle aucune clé : seulement le modèle
     utilisé et, en cas d'échec, le début du message d'erreur du fournisseur."""
-    import os
+    import os, time
     from services.claude_ai import complete, get_model
+    if _sante_cache["r"] and time.time() - _sante_cache["t"] < 600:
+        return _sante_cache["r"]  # au plus un appel à Claude aux 10 minutes
     try:
         r = await complete("Réponds seulement : ok", [{"role": "user", "content": "test"}], max_tokens=5)
-        return {"ia": {"ok": True, "fournisseur": "Claude", "model": await get_model(), "reponse": r[:20]}}
+        _sante_cache.update(t=time.time(), r={"ia": {"ok": True, "fournisseur": "Claude", "model": await get_model(), "reponse": r[:20]}})
+        return _sante_cache["r"]
     except Exception as e:
         return {"ia": {"ok": False, "erreur": str(e)[:300], "cle_presente": bool(os.getenv("ANTHROPIC_API_KEY"))}}

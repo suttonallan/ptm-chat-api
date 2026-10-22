@@ -7,9 +7,9 @@ def client_ip(request) -> str:
     """Vraie adresse du visiteur : Render place le serveur derrière un relais,
     qui transmet l'adresse d'origine dans X-Forwarded-For. Sans ça, tous les
     visiteurs partageraient la même limite."""
-    fwd = request.headers.get("x-forwarded-for", "")
+    fwd = [x.strip() for x in request.headers.get("x-forwarded-for", "").split(",") if x.strip()]
     if fwd:
-        return fwd.split(",")[0].strip()
+        return fwd[-1]  # le relais ajoute l'adresse réelle à la fin ; le début est falsifiable
     return get_remote_address(request)
 
 
@@ -23,9 +23,16 @@ MAX_ANALYSES_PER_DAY = 3
 _analysis_counts: dict = {}
 
 
+# Plafond global quotidien (tous visiteurs confondus) : protège la facture d'IA.
+MAX_ANALYSES_GLOBAL_PAR_JOUR = 150
+_global = {"date": None, "count": 0}
+
+
 def can_analyze(ip: str) -> bool:
     """Check if this IP still has photo analyses remaining today."""
     today = date.today()
+    if _global["date"] == today and _global["count"] >= MAX_ANALYSES_GLOBAL_PAR_JOUR:
+        return False
     record = _analysis_counts.get(ip)
     if not record or record["date"] != today:
         return True
@@ -35,6 +42,9 @@ def can_analyze(ip: str) -> bool:
 def record_analysis(ip: str):
     """Record one photo analysis for this IP."""
     today = date.today()
+    if _global["date"] != today:
+        _global["date"], _global["count"] = today, 0
+    _global["count"] += 1
     record = _analysis_counts.get(ip)
     if not record or record["date"] != today:
         _analysis_counts[ip] = {"date": today, "count": 1}
