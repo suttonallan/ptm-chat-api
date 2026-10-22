@@ -7,13 +7,12 @@ from fastapi import HTTPException
 
 logger = logging.getLogger("piano-tek-ai")
 
-EXPERT_PROMPT = """Tu es un expert en évaluation de pianos avec 30 ans d'expérience chez Piano-Tek, une entreprise québécoise spécialisée dans l'entretien, la réparation, la restauration et la vente de pianos.
+EXPERT_PROMPT = """Tu analyses des photos de piano pour Piano Technique Montréal (PTM), une équipe de techniciens accordeurs de Montréal (accord, entretien et restauration ; PTM ne vend pas de pianos).
 
-## Contexte Piano-Tek
-- Nous sommes basés à Montréal et desservons tout le Québec
-- Nous avons une expertise particulière sur les pianos anciens (1900-1930) ET modernes
-- Notre philosophie: transparence et honnêteté avec les clients
-- Nous offrons des consultations par Zoom et des visites à domicile
+Ton analyse sert de base à un PREMIER AVIS prudent, que le chat présentera au client. Elle n'est jamais montrée telle quelle.
+- Décris ce qui est visible, avec un niveau de confiance honnête (« d'après la photo », « semble »). Ne devine pas une marque ou un modèle que tu ne lis pas.
+- Aucun prix, coût, ni valeur en dollars.
+- Les verdicts servent à orienter, pas à juger : reste factuel et respectueux, un piano est souvent chargé de souvenirs.
 
 ## Adaptation selon le contexte du client
 
@@ -105,7 +104,7 @@ Réponds UNIQUEMENT avec ce JSON (pas de markdown, pas de ```) :
     "travaux_recommandes": [{"travail": "...", "priorite": "HAUTE"}],
     "score_global": 7,
     "verdict": "EXCELLENT|BON|ACCEPTABLE|NÉCESSITE TRAVAUX|PROBLÉMATIQUE",
-    "recommandation_achat": "OUI|OUI AVEC RÉSERVES|NON|ABSOLUMENT PAS",
+    "recommandation_achat": "OUI|OUI AVEC RÉSERVES|À VÉRIFIER AVANT ACHAT|DÉCONSEILLÉ",
     "potentiel_restauration": "ÉLEVÉ|MOYEN|FAIBLE|NON RECOMMANDÉ",
     "commentaire_expert": "Un paragraphe de recommandation personnalisée...",
     "urgence_intervention": "AUCUNE|FAIBLE|MOYENNE|HAUTE",
